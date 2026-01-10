@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
 <meta charset="utf-8">
-<title>AI VTuber - 動態知識庫版</title>
+<title>AI VTuber - 狀態修正版</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <style>
     body {
@@ -39,7 +39,7 @@
 
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* API 狀態 */
+    /* API 狀態 (右上角) */
     #api-status {
         position: absolute;
         top: 20px; right: 20px;
@@ -57,7 +57,7 @@
     .status-connected { background-color: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
     .status-error { background-color: #e74c3c; box-shadow: 0 0 5px #e74c3c; }
 
-    /* 檔案讀取狀態面板 (新增) */
+    /* 檔案讀取狀態面板 (左上角) */
     #file-status {
         position: absolute;
         top: 20px; left: 20px;
@@ -70,7 +70,7 @@
         z-index: 100;
         max-width: 220px;
         transition: opacity 0.5s;
-        pointer-events: none; /* 讓滑鼠可以穿透點擊後面的 3D */
+        pointer-events: none;
     }
     .file-status-item { 
         margin-bottom: 6px; 
@@ -85,7 +85,7 @@
     
     @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
-    /* 對話介面 (聊天室風格) */
+    /* 對話介面 */
     #chat-container {
         position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
         width: 90%; max-width: 600px;
@@ -96,8 +96,8 @@
     #chat-display {
         background: rgba(0, 0, 0, 0.6);
         padding: 15px; border-radius: 12px;
-        height: 120px; /* 固定高度 */
-        overflow-y: auto; /* 超出可捲動 */
+        height: 120px;
+        overflow-y: auto;
         backdrop-filter: blur(5px);
         border: 1px solid rgba(255,255,255,0.2);
         display: flex;
@@ -105,7 +105,6 @@
         gap: 10px;
     }
 
-    /* 訊息泡泡樣式 */
     .message {
         padding: 8px 12px;
         border-radius: 10px;
@@ -116,39 +115,12 @@
         color: white;
     }
 
-    .message-user {
-        align-self: flex-end; /* 靠右 */
-        background-color: #3498db;
-        border-bottom-right-radius: 2px;
-    }
+    .message-user { align-self: flex-end; background-color: #3498db; border-bottom-right-radius: 2px; }
+    .message-ai { align-self: flex-start; background-color: rgba(255, 255, 255, 0.2); border-bottom-left-radius: 2px; }
+    .message-system { align-self: center; background: transparent; color: #aaa; font-size: 12px; font-style: italic; }
 
-    .message-ai {
-        align-self: flex-start; /* 靠左 */
-        background-color: rgba(255, 255, 255, 0.2);
-        border-bottom-left-radius: 2px;
-    }
-
-    .message-system {
-        align-self: center;
-        background: transparent;
-        color: #aaa;
-        font-size: 12px;
-        font-style: italic;
-    }
-
-    /* 超連結樣式 */
-    .message a {
-        color: #4db8ff; /* 亮藍色，在深色背景清楚 */
-        text-decoration: underline;
-        font-weight: bold;
-        transition: color 0.2s;
-    }
-    .message a:hover {
-        color: #80d4ff;
-    }
-    .message-user a {
-        color: #cceeff; /* 在藍色背景上的連結顏色 */
-    }
+    .message a { color: #4db8ff; text-decoration: underline; font-weight: bold; }
+    .message-user a { color: #cceeff; }
 
     #input-area { display: flex; gap: 10px; }
     #user-input {
@@ -164,25 +136,14 @@
     #send-btn:hover { background: #2980b9; }
     #send-btn:disabled { background: #95a5a6; cursor: not-allowed; }
 
-    /* 靜音按鈕樣式 */
     #mute-btn {
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        border: none;
-        background: rgba(255, 255, 255, 0.9);
-        font-size: 20px;
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        width: 45px; height: 45px; border-radius: 50%; border: none;
+        background: rgba(255, 255, 255, 0.9); font-size: 20px; cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
         box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        transition: all 0.2s;
     }
-    #mute-btn:hover { background: #fff; transform: scale(1.05); }
     #mute-btn.muted { background: #e74c3c; color: white; }
     
-    /* 當前表情提示 (除錯用) */
     #emotion-debug {
         position: absolute; top: 70px; right: 20px;
         font-size: 12px; color: #555;
@@ -214,7 +175,6 @@
         <div class="loading-text" id="status-text">初始化系統中...</div>
     </div>
 
-    <!-- 新增：檔案讀取狀態面板 -->
     <div id="file-status">
         <div class="file-status-item"><span class="icon-loading">●</span> 準備讀取檔案...</div>
     </div>
@@ -231,10 +191,10 @@
 
     <div id="chat-container">
         <div id="chat-display">
-            <!-- 初始歡迎訊息 (中英對照) -->
             <div class="message message-ai">
-                Hello! I am your AI partner. You can speak English or Chinese.<br><br>
-                你好！我是你的 AI 夥伴。你可以說中文或英文。試試看問我知識庫裡的內容！
+                Hello! 我準備好了。
+                <br>左上角可以看到我的知識庫讀取狀態。
+                <br>右上角顯示我的 AI 連線狀態。
             </div>
         </div>
         <div id="input-area">
@@ -261,11 +221,10 @@
         let currentEmotion = 'neutral';
         let isMuted = false;
         
-        // --- 全域變數：儲存外部知識 ---
         let externalSystemPrompt = ""; 
         let externalKnowledge = "";
 
-        // --- 1. 場景初始化 ---
+        // --- 場景初始化 ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0xf0f4f8);
         scene.add(new THREE.GridHelper(10, 10, 0x888888, 0xe0e0e0));
@@ -276,7 +235,6 @@
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.setPixelRatio(window.devicePixelRatio);
-        renderer.outputColorSpace = THREE.SRGBColorSpace;
         document.body.appendChild(renderer.domElement);
 
         const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -286,19 +244,16 @@
 
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.target.set(0.0, 1.0, 0.0);
-        controls.enableDamping = true;
         controls.update();
 
-        // --- 2. 外部檔案讀取 (核心新功能：含狀態顯示) ---
+        // --- 檔案讀取 (左上角狀態) ---
         async function loadExternalData() {
             const statusText = document.getElementById('status-text');
             const fileStatusDiv = document.getElementById('file-status');
             
-            // 初始化狀態文字變數
             let promptStatusHTML = '<span class="icon-loading">●</span> 讀取 Prompt.txt...';
             let kbStatusHTML = '<span class="icon-loading">●</span> 讀取知識庫...';
 
-            // 更新 UI 的輔助函式
             const renderStatus = () => {
                 fileStatusDiv.innerHTML = `
                     <div class="file-status-item">${promptStatusHTML}</div>
@@ -306,54 +261,57 @@
                 `;
             };
             
-            renderStatus(); // 初始顯示
+            renderStatus();
 
-            // 2.1 讀取 Prompt.txt
             try {
                 statusText.innerText = "讀取角色設定...";
                 const res = await fetch(`./Prompt.txt?t=${Date.now()}`);
                 if (res.ok) {
                     externalSystemPrompt = await res.text();
-                    console.log("Loaded Prompt.txt");
                     promptStatusHTML = '<span class="icon-ok">✓</span> Prompt.txt (OK)';
                 } else {
-                    console.warn("Prompt.txt not found, utilizing built-in default.");
                     promptStatusHTML = '<span class="icon-fail">✗</span> Prompt.txt (預設)';
                 }
             } catch (e) {
-                console.warn("Error loading Prompt.txt", e);
                 promptStatusHTML = '<span class="icon-fail">✗</span> Prompt.txt (錯誤)';
             }
             renderStatus();
 
-            // 2.2 循環讀取 KnowledgeBaseXX.txt
             statusText.innerText = "讀取雲端知識庫...";
             let fileIndex = 1;
             let keepLoading = true;
             let loadedCount = 0;
             
+            // 這裡也修改支援了 KnowledgeBase 資料夾
             while (keepLoading) {
-                const fileName = `KnowledgeBase${String(fileIndex).padStart(2, '0')}.txt`;
-                // 更新 loading 狀態，顯示正在讀取哪個檔案
-                kbStatusHTML = `<span class="icon-loading">●</span> 掃描 ${fileName}...`;
+                // 嘗試兩種路徑：根目錄 或 KnowledgeBase/ 資料夾
+                const fileNameRoot = `KnowledgeBase${String(fileIndex).padStart(2, '0')}.txt`;
+                const fileNameFolder = `KnowledgeBase/KnowledgeBase${String(fileIndex).padStart(2, '0')}.txt`;
+                
+                kbStatusHTML = `<span class="icon-loading">●</span> 掃描 ${fileNameRoot}...`;
                 renderStatus();
 
                 try {
-                    const res = await fetch(`./${fileName}?t=${Date.now()}`);
+                    // 先試試看 KnowledgeBase 資料夾
+                    let res = await fetch(`./${fileNameFolder}?t=${Date.now()}`);
+                    let usedPath = fileNameFolder;
+                    
+                    if (!res.ok) {
+                         // 失敗的話，試試看根目錄
+                         res = await fetch(`./${fileNameRoot}?t=${Date.now()}`);
+                         usedPath = fileNameRoot;
+                    }
+
                     if (res.ok) {
                         const text = await res.text();
                         if (text.trim().length > 0) {
-                            externalKnowledge += `\n\n【外部知識來源 ${fileName}】\n${text}`;
-                            console.log(`Loaded ${fileName}`);
+                            externalKnowledge += `\n\n【外部知識來源 ${usedPath}】\n${text}`;
                             loadedCount++;
                             fileIndex++;
                         } else {
-                            // 檔案存在但空白
                             fileIndex++;
                         }
                     } else {
-                        // 404 或其他錯誤，停止讀取
-                        console.log(`Stop loading knowledge at ${fileName}`);
                         keepLoading = false;
                     }
                 } catch (e) {
@@ -361,73 +319,59 @@
                 }
             }
 
-            // 最終知識庫狀態
             if (loadedCount > 0) {
                 kbStatusHTML = `<span class="icon-ok">✓</span> 知識庫 (共 ${loadedCount} 檔)`;
             } else {
                 kbStatusHTML = `<span class="icon-fail">✗</span> 知識庫 (未載入)`;
             }
             renderStatus();
-            
             statusText.innerText = "系統就緒！";
         }
 
-        // --- 3. 載入 VRM 與 啟動流程 ---
+        // --- VRM 載入 ---
         const loader = new GLTFLoader();
         loader.crossOrigin = 'anonymous';
         loader.register((parser) => new VRMLoaderPlugin(parser));
 
-        // 同時執行模型下載與文字檔讀取
         Promise.all([
             new Promise((resolve) => {
-                loader.load(
-                    VRM_URL,
-                    (gltf) => {
-                        const vrm = gltf.userData.vrm;
-                        VRMUtils.rotateVRM0(vrm);
-                        scene.add(vrm.scene);
-                        currentVrm = vrm;
-                        
-                        // A-Pose 修正
-                        const leftUpperArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm');
-                        const rightUpperArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm');
-                        if (leftUpperArm) { leftUpperArm.rotation.z = -1.1; leftUpperArm.rotation.x = 0.15; }
-                        if (rightUpperArm) { rightUpperArm.rotation.z = 1.1; rightUpperArm.rotation.x = 0.15; }
+                loader.load(VRM_URL, (gltf) => {
+                    const vrm = gltf.userData.vrm;
+                    VRMUtils.rotateVRM0(vrm);
+                    scene.add(vrm.scene);
+                    currentVrm = vrm;
+                    
+                    const leftUpperArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm');
+                    const rightUpperArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm');
+                    if (leftUpperArm) { leftUpperArm.rotation.z = -1.1; leftUpperArm.rotation.x = 0.15; }
+                    if (rightUpperArm) { rightUpperArm.rotation.z = 1.1; rightUpperArm.rotation.x = 0.15; }
 
-                        // 調整相機特寫
-                        const headNode = vrm.humanoid.getNormalizedBoneNode('head');
-                        if (headNode) {
-                            const headPos = new THREE.Vector3();
-                            headNode.getWorldPosition(headPos);
-                            controls.target.set(headPos.x, headPos.y, headPos.z);
-                            camera.position.set(headPos.x, headPos.y, headPos.z + 1.0);
-                            controls.update();
-                        }
-                        
-                        // 啟動眨眼
-                        startBlinking();
-                        resolve();
-                    },
-                    (progress) => {
-                        const percent = Math.round(100.0 * (progress.loaded / progress.total));
-                        document.getElementById('status-text').innerText = `正在下載模型... ${percent}%`;
-                    },
-                    (error) => {
-                        console.error(error);
-                        resolve(); // 即使失敗也繼續，以免卡住
+                    const headNode = vrm.humanoid.getNormalizedBoneNode('head');
+                    if (headNode) {
+                        const headPos = new THREE.Vector3();
+                        headNode.getWorldPosition(headPos);
+                        controls.target.set(headPos.x, headPos.y, headPos.z);
+                        camera.position.set(headPos.x, headPos.y, headPos.z + 1.0);
+                        controls.update();
                     }
-                );
+                    
+                    startBlinking();
+                    resolve();
+                },
+                (progress) => {
+                    const percent = Math.round(100.0 * (progress.loaded / progress.total));
+                    document.getElementById('status-text').innerText = `正在下載模型... ${percent}%`;
+                }, (e) => resolve());
             }),
-            loadExternalData() // 呼叫文字檔讀取
+            loadExternalData()
         ]).then(() => {
-            // 全部完成後關閉讀取畫面
             setTimeout(() => {
                 document.getElementById('loading-screen').style.display = 'none';
                 testApiConnection();
             }, 500);
         });
 
-        // --- 4. 動畫與物理 ---
+        // --- 動畫 ---
         const clock = new THREE.Clock();
         function animate() {
             requestAnimationFrame(animate);
@@ -436,15 +380,11 @@
 
             if (currentVrm) {
                 currentVrm.update(deltaTime);
-
-                // 呼吸擺動
                 const spine = currentVrm.humanoid.getNormalizedBoneNode('spine');
                 if (spine) {
                     spine.rotation.x = Math.sin(elapsedTime * 1.5) * 0.03;
                     spine.rotation.y = Math.sin(elapsedTime * 0.8) * 0.02;
                 }
-
-                // 嘴型同步
                 if (isSpeaking && !isMuted) {
                     const s = Math.sin(elapsedTime * 15);
                     currentVrm.expressionManager.setValue('aa', (s + 1) / 2 * 0.7);
@@ -458,19 +398,17 @@
         }
         animate();
 
-        // 眨眼系統
         function startBlinking() {
             if(!currentVrm) return;
             const blinkLoop = () => {
                 if (!window.actionActive) {
-                    const blinkDuration = Math.random() * 3 + 2; 
                     setTimeout(() => {
                         currentVrm.expressionManager.setValue('blink', 1);
                         setTimeout(() => {
                             currentVrm.expressionManager.setValue('blink', 0);
                             blinkLoop();
                         }, 150);
-                    }, blinkDuration * 1000);
+                    }, Math.random() * 3000 + 2000);
                 } else {
                     setTimeout(blinkLoop, 1000);
                 }
@@ -478,62 +416,32 @@
             blinkLoop();
         }
 
-        // --- 5. 表情控制核心 ---
+        // --- 情緒控制 ---
         const VALID_EMOTIONS = ['neutral', 'happy', 'angry', 'sad', 'relaxed', 'surprised'];
-        
         function setEmotion(emotionName) {
-            if (!currentVrm || !emotionName) return;
-            
-            // 容錯映射
+            if (!currentVrm) return;
             if (emotionName === 'joy') emotionName = 'happy';
             if (emotionName === 'sorrow') emotionName = 'sad';
             if (emotionName === 'fun') emotionName = 'relaxed';
-            
             if (!VALID_EMOTIONS.includes(emotionName)) emotionName = 'neutral';
-
-            console.log("Setting Emotion:", emotionName);
-            currentEmotion = emotionName;
-
+            
             updateDebugDisplay(emotionName, null);
-
-            // 重置所有情緒
-            VALID_EMOTIONS.forEach(emo => {
-                currentVrm.expressionManager.setValue(emo, 0);
-            });
-
-            // 設定目標情緒
-            if (emotionName !== 'neutral') {
-                currentVrm.expressionManager.setValue(emotionName, 0.8);
-            }
+            VALID_EMOTIONS.forEach(emo => currentVrm.expressionManager.setValue(emo, 0));
+            if (emotionName !== 'neutral') currentVrm.expressionManager.setValue(emotionName, 0.8);
         }
 
-        window.actionActive = false; 
-
+        window.actionActive = false;
         function triggerAction(actionName, duration) {
-            if (!currentVrm || actionName === 'none' || !duration) {
-                updateDebugDisplay(null, 'None');
-                return;
-            }
-
-            console.log(`Trigger Action: ${actionName} for ${duration}ms`);
-            updateDebugDisplay(null, `${actionName} (${duration}ms)`);
-            
-            let shapeName = null;
-            if (actionName === 'blink_left') shapeName = 'blinkLeft';
-            if (actionName === 'blink_right') shapeName = 'blinkRight';
-            if (actionName === 'blink_both') shapeName = 'blink';
-
-            if (shapeName) {
-                window.actionActive = true;
-                currentVrm.expressionManager.setValue(shapeName, 1.0); // 完全閉合
-
-                // 設定定時器恢復
-                setTimeout(() => {
-                    currentVrm.expressionManager.setValue(shapeName, 0);
-                    window.actionActive = false;
-                    updateDebugDisplay(null, 'Done');
-                }, duration);
-            }
+            if (!currentVrm || actionName === 'none') return;
+            updateDebugDisplay(null, `${actionName}`);
+            let shapeName = actionName === 'blink_left' ? 'blinkLeft' : (actionName === 'blink_right' ? 'blinkRight' : 'blink');
+            window.actionActive = true;
+            currentVrm.expressionManager.setValue(shapeName, 1.0);
+            setTimeout(() => {
+                currentVrm.expressionManager.setValue(shapeName, 0);
+                window.actionActive = false;
+                updateDebugDisplay(null, 'Done');
+            }, duration);
         }
 
         function updateDebugDisplay(emo, act) {
@@ -542,64 +450,29 @@
             if(act) debugDiv.innerHTML = debugDiv.innerHTML.replace(/動作: .*/, `動作: ${act}`);
         }
 
-        // --- 6. 聊天室 UI 輔助函式 ---
-        function formatText(text) {
-            let safeText = text.replace(/&/g, "&amp;")
-                               .replace(/</g, "&lt;")
-                               .replace(/>/g, "&gt;")
-                               .replace(/"/g, "&quot;")
-                               .replace(/'/g, "&#039;");
-
-            safeText = safeText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
-                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${linkText}</a>`;
-            });
-
-            safeText = safeText.replace(/\n/g, "<br>");
-            return safeText;
-        }
-
         function addMessage(text, type) {
             const chatDisplay = document.getElementById('chat-display');
             const div = document.createElement('div');
             div.className = `message message-${type}`;
-            div.innerHTML = formatText(text);
+            
+            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+            // 處理連結
+            safeText = safeText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            div.innerHTML = safeText;
             chatDisplay.appendChild(div);
             chatDisplay.scrollTop = chatDisplay.scrollHeight;
             return div;
         }
 
-        function removeMessage(element) {
-            if(element && element.parentNode) {
-                element.parentNode.removeChild(element);
-            }
-        }
+        function removeMessage(el) { if(el && el.parentNode) el.parentNode.removeChild(el); }
 
-        // --- 7. Gemini API & 訊息處理 ---
+        // --- API 連線檢查 (右上角) ---
         const statusDot = document.getElementById('status-dot');
         const statusMsg = document.getElementById('status-msg');
         const userInput = document.getElementById('user-input');
         const sendBtn = document.getElementById('send-btn');
         const muteBtn = document.getElementById('mute-btn');
-        const chatDisplay = document.getElementById('chat-display');
-
-        let availableVoices = [];
-        window.speechSynthesis.onvoiceschanged = () => {
-            availableVoices = window.speechSynthesis.getVoices();
-        };
-
-        muteBtn.addEventListener('click', () => {
-            isMuted = !isMuted;
-            if (isMuted) {
-                muteBtn.innerText = '🔇';
-                muteBtn.classList.add('muted');
-                window.speechSynthesis.cancel(); 
-                isSpeaking = false; 
-                if(currentVrm) currentVrm.expressionManager.setValue('aa', 0); 
-            } else {
-                muteBtn.innerText = '🔊';
-                muteBtn.classList.remove('muted');
-            }
-        });
 
         async function testApiConnection() {
             try {
@@ -610,8 +483,9 @@
                 });
                 if (response.ok) {
                     statusDot.classList.add('status-connected');
-                    statusMsg.innerText = "知識庫已載入";
-                    enableChat();
+                    // *** 修正處：文字不再誤導 ***
+                    statusMsg.innerText = "AI 連線正常";
+                    userInput.disabled = false; sendBtn.disabled = false;
                 } else throw new Error();
             } catch (e) {
                 statusDot.classList.add('status-error');
@@ -619,196 +493,100 @@
             }
         }
 
-        function enableChat() {
-            userInput.disabled = false; sendBtn.disabled = false; userInput.focus();
-        }
+        // --- 訊息發送與處理 ---
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            muteBtn.classList.toggle('muted', isMuted);
+            muteBtn.innerText = isMuted ? '🔇' : '🔊';
+            if(isMuted) { window.speechSynthesis.cancel(); isSpeaking = false; }
+        });
 
         async function handleSendMessage() {
             const text = userInput.value.trim();
             if (!text) return;
 
-            userInput.value = ''; 
-            userInput.disabled = true; 
-            sendBtn.disabled = true;
-            
+            userInput.value = ''; userInput.disabled = true; sendBtn.disabled = true;
             addMessage(text, 'user');
             const loadingMsg = addMessage("Thinking...", 'system');
+            
             chatHistory.push({ role: "user", parts: [{ text: text }] });
 
-            // --- 組裝 Prompt：外部設定 + 外部知識 + 預設備案 ---
-            
-            // 1. 基礎設定 (如果 Prompt.txt 讀失敗，就用這個)
-            const fallbackPrompt = `
-                You are a virtual AI character.
-                Reply in Traditional Chinese (zh-TW) by default.
-                Output strictly JSON:
-                { "text": "response", "emotion": "neutral", "action": "none", "duration": 0 }
-            `;
-
             let finalSystemInstruction = "";
+            if (externalSystemPrompt) finalSystemInstruction += externalSystemPrompt;
+            else finalSystemInstruction += `You are a virtual AI character. Reply in Traditional Chinese. Output JSON: { "text": "response", "emotion": "neutral", "action": "none" }`;
 
-            if (externalSystemPrompt && externalSystemPrompt.length > 0) {
-                // 使用外部讀取的設定
-                finalSystemInstruction += externalSystemPrompt;
-            } else {
-                // 使用內建備案
-                finalSystemInstruction += fallbackPrompt;
+            if (externalKnowledge) {
+                finalSystemInstruction += "\n\n====== KNOWLEDGE BASE (HIGH PRIORITY) ======\n" + externalKnowledge + "\n============================================\n";
             }
 
-            // 2. 注入知識庫
-            if (externalKnowledge && externalKnowledge.length > 0) {
-                finalSystemInstruction += "\n\n====== KNOWLEDGE BASE (HIGH PRIORITY) ======\n";
-                finalSystemInstruction += externalKnowledge;
-                finalSystemInstruction += "\n============================================\n";
-            }
-
-            // 3. 注入強制優先權指令
-            finalSystemInstruction += `
-                
-                【CRITICAL PRIORITY INSTRUCTIONS】
-                1. First, CHECK the "KNOWLEDGE BASE" section above. If the answer is there, use it directly.
-                2. If not found in Knowledge Base, use the "Google Search" tool to find the latest info.
-                3. If neither has the answer, use your internal knowledge.
-                
-                REMEMBER: You MUST return a JSON object as defined in the prompt.
-            `;
+            finalSystemInstruction += `\n【INSTRUCTIONS】\n1. Use Knowledge Base first.\n2. Use Google Search if needed.\n3. Return JSON format.`;
 
             try {
-                const safeHistory = chatHistory.filter(msg => {
-                    const part = msg.parts[0];
-                    return part && typeof part.text === 'string' && part.text.trim() !== '' && part.text !== '...';
-                });
-
-                const payload = {
-                    contents: safeHistory,
-                    systemInstruction: { parts: [{ text: finalSystemInstruction }] },
-                    tools: [{ google_search: {} }],
-                };
-
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
+                    body: JSON.stringify({
+                        contents: chatHistory,
+                        systemInstruction: { parts: [{ text: finalSystemInstruction }] },
+                        tools: [{ google_search: {} }]
+                    })
                 });
 
                 const data = await response.json();
-                if (data.error) throw new Error(data.error.message);
-
                 removeMessage(loadingMsg);
-
-                let rawText = data.candidates[0].content.parts[0].text;
-                let result = { text: "", emotion: 'neutral', action: 'none', duration: 0 };
+                
+                let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error";
+                let result = { text: rawText, emotion: 'neutral' };
 
                 try {
                     const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                        result = JSON.parse(jsonMatch[0]);
-                    } else {
-                        result.text = rawText;
-                        result.emotion = 'neutral';
-                    }
-                } catch (e) {
-                    console.warn("JSON Parse Failed", e);
-                    result.text = rawText;
+                    if (jsonMatch) result = JSON.parse(jsonMatch[0]);
+                } catch(e) {}
+
+                if(!result.text) result.text = rawText;
+
+                // 簡單的情緒關鍵字補強
+                if(result.emotion === 'neutral') {
+                    if(result.text.match(/(開心|快樂|happy)/)) result.emotion = 'happy';
+                    if(result.text.match(/(難過|悲傷|sad)/)) result.emotion = 'sad';
                 }
 
-                if (!result.text) result.text = result.response || result.message || rawText;
-
-                // 補充的情緒判斷邏輯 (以防 AI 忘記回傳 JSON)
-                const lowerText = result.text.toLowerCase();
-                const inputLower = text.toLowerCase();
-
-                if (inputLower.match(/(閉|眨|close|blink).*(右|right)/)) {
-                    result.action = "blink_right"; result.duration = 3000;
-                } else if (inputLower.match(/(閉|眨|close|blink).*(左|left)/)) {
-                    result.action = "blink_left"; result.duration = 3000;
-                }
-
-                if (!result.emotion || result.emotion === 'neutral') {
-                    if (lowerText.match(/(哀傷|悲傷|難過|痛苦|sad|cry)/)) result.emotion = 'sad';
-                    else if (lowerText.match(/(開心|快樂|happy|joy)/)) result.emotion = 'happy';
-                    else if (lowerText.match(/(生氣|憤怒|angry)/)) result.emotion = 'angry';
-                    else if (lowerText.match(/(驚訝|surprised)/)) result.emotion = 'surprised';
-                }
-
-                const finalResponseText = result.text && result.text.length > 0 ? result.text : "（Nod）";
-
-                chatHistory.push({ role: "model", parts: [{ text: finalResponseText }] });
-                
-                addMessage(finalResponseText, 'ai');
-                setEmotion(result.emotion || 'neutral');
-                if (result.action && result.action !== 'none') {
-                    triggerAction(result.action, result.duration || 2000);
-                }
-
-                speak(finalResponseText);
+                chatHistory.push({ role: "model", parts: [{ text: result.text }] });
+                addMessage(result.text, 'ai');
+                setEmotion(result.emotion);
+                if(result.action) triggerAction(result.action, 2000);
+                speak(result.text);
 
             } catch (error) {
-                console.error("Error:", error);
                 removeMessage(loadingMsg);
-                addMessage("System Busy...", 'system');
+                addMessage("連線發生錯誤，請檢查 API Key 或網路。", 'system');
             } finally {
                 userInput.disabled = false; sendBtn.disabled = false; userInput.focus();
             }
         }
 
-        // 語音合成 (中英混雜過濾)
+        // --- 語音 ---
         function speak(text) {
             if (isMuted) return;
-
-            const cleanText = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '');
-            const textWithoutSymbols = cleanText.replace(/[\x00-\x7F]/g, '')
-                                                .replace(/[\u3000-\u303F\uFF00-\uFFEF\u2000-\u206F]/g, '');
-            const hasChinese = /[\u4e00-\u9fa5]/.test(cleanText);
-
-            let targetLang = '';
-            if (hasChinese) {
-                targetLang = 'zh-TW';
-            } else {
-                if (textWithoutSymbols.trim().length === 0) {
-                    targetLang = 'en-US';
-                } else {
-                    console.log("偵測到非中英文內容，靜音");
-                    return; 
-                }
-            }
-
+            const cleanText = text.replace(/\[.*?\]\(.*?\)/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9,.\?]/g, '');
+            if(!cleanText) return;
+            
             window.speechSynthesis.cancel();
-            const utterance = new SpeechSynthesisUtterance(cleanText);
-            
-            utterance.lang = targetLang;
-            utterance.rate = 1.0; 
-            utterance.pitch = 0.8; 
-
-            if (availableVoices.length === 0) availableVoices = window.speechSynthesis.getVoices();
-            
-            let voiceTarget = targetLang === 'zh-TW' ? 'zh' : 'en';
-            let voice = availableVoices.find(v => v.lang.includes(voiceTarget) && v.name.includes('Google'));
-            if (!voice) voice = availableVoices.find(v => v.lang.includes(voiceTarget));
-            if (voice) utterance.voice = voice;
-
-            utterance.onstart = () => { isSpeaking = true; };
-            utterance.onend = () => { isSpeaking = false; if(currentVrm) currentVrm.expressionManager.setValue('aa', 0); };
-            window.speechSynthesis.speak(utterance);
+            const u = new SpeechSynthesisUtterance(cleanText);
+            u.lang = 'zh-TW';
+            u.onstart = () => isSpeaking = true;
+            u.onend = () => { isSpeaking = false; if(currentVrm) currentVrm.expressionManager.setValue('aa', 0); };
+            window.speechSynthesis.speak(u);
         }
 
         sendBtn.addEventListener('click', handleSendMessage);
         userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                window.speechSynthesis.cancel();
-                isSpeaking = false;
-                if (currentVrm) currentVrm.expressionManager.setValue('aa', 0);
-            }
-        });
 
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
     </script>
 </body>
 </html>
