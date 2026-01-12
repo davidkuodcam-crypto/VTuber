@@ -1,131 +1,592 @@
 <!DOCTYPE html>
-<html lang="en-us">
-  <head>
-    <meta charset="utf-8">
-    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-    <title>Unity WebGL Player | 20260112</title>
-    <link rel="shortcut icon" href="TemplateData/favicon.ico">
-    <link rel="stylesheet" href="TemplateData/style.css">
-  </head>
-  <body>
-    <div id="unity-container" class="unity-desktop">
-      <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
-      <div id="unity-loading-bar">
-        <div id="unity-logo"></div>
-        <div id="unity-progress-bar-empty">
-          <div id="unity-progress-bar-full"></div>
-        </div>
-      </div>
-      <div id="unity-warning"> </div>
-      <div id="unity-footer">
-        <div id="unity-webgl-logo"></div>
-        <div id="unity-fullscreen-button"></div>
-        <div id="unity-build-title">20260112</div>
-      </div>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8">
+<title>AI VTuber - 狀態修正版</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+    body {
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background-color: #f0f4f8;
+        font-family: "Noto Sans TC", sans-serif;
+    }
+    
+    /* 讀取畫面 */
+    #loading-screen {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 999;
+        transition: opacity 0.5s ease;
+    }
+    
+    .loader {
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        width: 50px; height: 50px;
+        animation: spin 1s linear infinite;
+        margin-bottom: 20px;
+    }
+
+    .loading-text { color: #555; font-size: 1.2rem; font-weight: bold; }
+
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* API 狀態 (右上角) */
+    #api-status {
+        position: absolute;
+        top: 20px; right: 20px;
+        padding: 8px 15px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 20px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #666;
+        display: flex; align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        z-index: 100;
+    }
+    .status-dot { width: 10px; height: 10px; border-radius: 50%; background-color: #ccc; margin-right: 8px; }
+    .status-connected { background-color: #2ecc71; box-shadow: 0 0 5px #2ecc71; }
+    .status-error { background-color: #e74c3c; box-shadow: 0 0 5px #e74c3c; }
+
+    /* 檔案讀取狀態面板 (左上角) */
+    #file-status {
+        position: absolute;
+        top: 20px; left: 20px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 12px;
+        font-size: 13px;
+        color: #333;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+        z-index: 100;
+        max-width: 220px;
+        transition: opacity 0.5s;
+        pointer-events: none;
+    }
+    .file-status-item { 
+        margin-bottom: 6px; 
+        display: flex; 
+        align-items: center; 
+        white-space: nowrap;
+    }
+    .file-status-item:last-child { margin-bottom: 0; }
+    .icon-ok { color: #27ae60; margin-right: 8px; font-weight: bold; font-size: 14px; }
+    .icon-fail { color: #e74c3c; margin-right: 8px; font-weight: bold; font-size: 14px; }
+    .icon-loading { color: #3498db; margin-right: 8px; font-weight: bold; animation: pulse 1s infinite; }
+    
+    @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
+
+    /* 對話介面 */
+    #chat-container {
+        position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+        width: 90%; max-width: 600px;
+        display: flex; flex-direction: column; gap: 10px;
+        z-index: 100;
+    }
+
+    #chat-display {
+        background: rgba(0, 0, 0, 0.6);
+        padding: 15px; border-radius: 12px;
+        height: 120px;
+        overflow-y: auto;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255,255,255,0.2);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .message {
+        padding: 8px 12px;
+        border-radius: 10px;
+        max-width: 80%;
+        word-wrap: break-word;
+        font-size: 15px;
+        line-height: 1.4;
+        color: white;
+    }
+
+    .message-user { align-self: flex-end; background-color: #3498db; border-bottom-right-radius: 2px; }
+    .message-ai { align-self: flex-start; background-color: rgba(255, 255, 255, 0.2); border-bottom-left-radius: 2px; }
+    .message-system { align-self: center; background: transparent; color: #aaa; font-size: 12px; font-style: italic; }
+
+    .message a { color: #4db8ff; text-decoration: underline; font-weight: bold; }
+    .message-user a { color: #cceeff; }
+
+    #input-area { display: flex; gap: 10px; }
+    #user-input {
+        flex: 1; padding: 12px; border-radius: 25px; border: none; outline: none;
+        background: rgba(255, 255, 255, 0.9); font-size: 16px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    }
+    #send-btn {
+        padding: 0 20px; border-radius: 25px; border: none;
+        background: #3498db; color: white; font-weight: bold; cursor: pointer;
+        transition: background 0.2s;
+    }
+    #send-btn:hover { background: #2980b9; }
+    #send-btn:disabled { background: #95a5a6; cursor: not-allowed; }
+
+    #mute-btn {
+        width: 45px; height: 45px; border-radius: 50%; border: none;
+        background: rgba(255, 255, 255, 0.9); font-size: 20px; cursor: pointer;
+        display: flex; justify-content: center; align-items: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    #mute-btn.muted { background: #e74c3c; color: white; }
+    
+    #emotion-debug {
+        position: absolute; top: 70px; right: 20px;
+        font-size: 12px; color: #555;
+        background: rgba(255,255,255,0.9);
+        padding: 8px 12px; border-radius: 8px;
+        pointer-events: none;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        text-align: right;
+        line-height: 1.4;
+    }
+
+</style>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+        "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.0.0/lib/three-vrm.module.js"
+    }
+}
+</script>
+</head>
+
+<body>
+
+    <div id="loading-screen">
+        <div class="loader"></div>
+        <div class="loading-text" id="status-text">初始化系統中...</div>
     </div>
-    <script>
 
-      var container = document.querySelector("#unity-container");
-      var canvas = document.querySelector("#unity-canvas");
-      var loadingBar = document.querySelector("#unity-loading-bar");
-      var progressBarFull = document.querySelector("#unity-progress-bar-full");
-      var fullscreenButton = document.querySelector("#unity-fullscreen-button");
-      var warningBanner = document.querySelector("#unity-warning");
+    <div id="file-status">
+        <div class="file-status-item"><span class="icon-loading">●</span> 準備讀取檔案...</div>
+    </div>
 
-      // Shows a temporary message banner/ribbon for a few seconds, or
-      // a permanent error message on top of the canvas if type=='error'.
-      // If type=='warning', a yellow highlight color is used.
-      // Modify or remove this function to customize the visually presented
-      // way that non-critical warnings and error messages are presented to the
-      // user.
-      function unityShowBanner(msg, type) {
-        function updateBannerVisibility() {
-          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
-        }
-        var div = document.createElement('div');
-        div.innerHTML = msg;
-        warningBanner.appendChild(div);
-        if (type == 'error') div.style = 'background: red; padding: 10px;';
-        else {
-          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
-          setTimeout(function() {
-            warningBanner.removeChild(div);
-            updateBannerVisibility();
-          }, 5000);
-        }
-        updateBannerVisibility();
-      }
+    <div id="api-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-msg">連線中...</span>
+    </div>
+    
+    <div id="emotion-debug">
+        情緒: Neutral<br>
+        動作: None
+    </div>
 
-      var buildUrl = "Build";
-      var loaderUrl = buildUrl + "/test.loader.js";
-      var config = {
-        dataUrl: buildUrl + "/test.data",
-        frameworkUrl: buildUrl + "/test.framework.js",
-        codeUrl: buildUrl + "/test.wasm",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "DefaultCompany",
-        productName: "20260112",
-        productVersion: "0.1",
-        showBanner: unityShowBanner,
-      };
+    <div id="chat-container">
+        <div id="chat-display">
+            <div class="message message-ai">
+                Hello! 我準備好了。
+                <br>左上角可以看到我的知識庫讀取狀態。
+                <br>右上角顯示我的 AI 連線狀態。
+            </div>
+        </div>
+        <div id="input-area">
+            <button id="mute-btn" title="切換聲音">🔊</button>
+            <input type="text" id="user-input" placeholder="輸入訊息..." disabled>
+            <button id="send-btn" disabled>Send</button>
+        </div>
+    </div>
 
-      // By default, Unity keeps WebGL canvas render target size matched with
-      // the DOM size of the canvas element (scaled by window.devicePixelRatio)
-      // Set this to false if you want to decouple this synchronization from
-      // happening inside the engine, and you would instead like to size up
-      // the canvas DOM size and WebGL render target sizes yourself.
-      // config.matchWebGLToCanvasSize = false;
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
 
-      // If you would like all file writes inside Unity Application.persistentDataPath
-      // directory to automatically persist so that the contents are remembered when
-      // the user revisits the site the next time, uncomment the following line:
-      // config.autoSyncPersistentDataPath = true;
-      // This autosyncing is currently not the default behavior to avoid regressing
-      // existing user projects that might rely on the earlier manual
-      // JS_FileSystem_Sync() behavior, but in future Unity version, this will be
-      // expected to change.
+        const GEMINI_API_KEY = "AIzaSyAQckQ8clyCDVDnyBKd5TMvVMm7oFsmTgY";
+        const GEMINI_MODEL = "gemini-2.0-flash-exp"; 
+        const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        const VRM_URL = 'https://davidkuodcam-crypto.github.io/VTuber/AvatarSample_C.vrm';
 
-      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-        // Mobile device style: fill the whole browser client area with the game canvas:
+        let currentVrm = undefined;
+        let chatHistory = [];
+        let isSpeaking = false;
+        let currentEmotion = 'neutral';
+        let isMuted = false;
+        
+        let externalSystemPrompt = ""; 
+        let externalKnowledge = "";
 
-        var meta = document.createElement('meta');
-        meta.name = 'viewport';
-        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
-        document.getElementsByTagName('head')[0].appendChild(meta);
-        container.className = "unity-mobile";
-        canvas.className = "unity-mobile";
+        // --- 場景初始化 ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f4f8);
+        scene.add(new THREE.GridHelper(10, 10, 0x888888, 0xe0e0e0));
 
-        // To lower canvas resolution on mobile devices to gain some
-        // performance, uncomment the following line:
-        // config.devicePixelRatio = 1;
+        const camera = new THREE.PerspectiveCamera(30.0, window.innerWidth / window.innerHeight, 0.1, 20.0);
+        camera.position.set(0.0, 1.4, 3.5);
 
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        document.body.appendChild(renderer.domElement);
 
-      } else {
-        // Desktop style: Render the game canvas in a window that can be maximized to fullscreen:
+        const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        directionalLight.position.set(1.0, 1.0, 1.0).normalize();
+        scene.add(directionalLight);
+        scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-        canvas.style.width = "960px";
-        canvas.style.height = "600px";
-      }
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0.0, 1.0, 0.0);
+        controls.update();
 
-      loadingBar.style.display = "block";
+        // --- 檔案讀取 (左上角狀態) ---
+        async function loadExternalData() {
+            const statusText = document.getElementById('status-text');
+            const fileStatusDiv = document.getElementById('file-status');
+            
+            let promptStatusHTML = '<span class="icon-loading">●</span> 讀取 Prompt.txt...';
+            let kbStatusHTML = '<span class="icon-loading">●</span> 讀取知識庫...';
 
-      var script = document.createElement("script");
-      script.src = loaderUrl;
-      script.onload = () => {
-        createUnityInstance(canvas, config, (progress) => {
-          progressBarFull.style.width = 100 * progress + "%";
-              }).then((unityInstance) => {
-                loadingBar.style.display = "none";
-                fullscreenButton.onclick = () => {
-                  unityInstance.SetFullscreen(1);
-                };
-              }).catch((message) => {
-                alert(message);
-              });
+            const renderStatus = () => {
+                fileStatusDiv.innerHTML = `
+                    <div class="file-status-item">${promptStatusHTML}</div>
+                    <div class="file-status-item">${kbStatusHTML}</div>
+                `;
             };
+            
+            renderStatus();
 
-      document.body.appendChild(script);
+            try {
+                statusText.innerText = "讀取角色設定...";
+                const res = await fetch(`./Prompt.txt?t=${Date.now()}`);
+                if (res.ok) {
+                    externalSystemPrompt = await res.text();
+                    promptStatusHTML = '<span class="icon-ok">✓</span> Prompt.txt (OK)';
+                } else {
+                    promptStatusHTML = '<span class="icon-fail">✗</span> Prompt.txt (預設)';
+                }
+            } catch (e) {
+                promptStatusHTML = '<span class="icon-fail">✗</span> Prompt.txt (錯誤)';
+            }
+            renderStatus();
 
+            statusText.innerText = "讀取雲端知識庫...";
+            let fileIndex = 1;
+            let keepLoading = true;
+            let loadedCount = 0;
+            
+            // 這裡也修改支援了 KnowledgeBase 資料夾
+            while (keepLoading) {
+                // 嘗試兩種路徑：根目錄 或 KnowledgeBase/ 資料夾
+                const fileNameRoot = `KnowledgeBase${String(fileIndex).padStart(2, '0')}.txt`;
+                const fileNameFolder = `KnowledgeBase/KnowledgeBase${String(fileIndex).padStart(2, '0')}.txt`;
+                
+                kbStatusHTML = `<span class="icon-loading">●</span> 掃描 ${fileNameRoot}...`;
+                renderStatus();
+
+                try {
+                    // 先試試看 KnowledgeBase 資料夾
+                    let res = await fetch(`./${fileNameFolder}?t=${Date.now()}`);
+                    let usedPath = fileNameFolder;
+                    
+                    if (!res.ok) {
+                         // 失敗的話，試試看根目錄
+                         res = await fetch(`./${fileNameRoot}?t=${Date.now()}`);
+                         usedPath = fileNameRoot;
+                    }
+
+                    if (res.ok) {
+                        const text = await res.text();
+                        if (text.trim().length > 0) {
+                            externalKnowledge += `\n\n【外部知識來源 ${usedPath}】\n${text}`;
+                            loadedCount++;
+                            fileIndex++;
+                        } else {
+                            fileIndex++;
+                        }
+                    } else {
+                        keepLoading = false;
+                    }
+                } catch (e) {
+                    keepLoading = false;
+                }
+            }
+
+            if (loadedCount > 0) {
+                kbStatusHTML = `<span class="icon-ok">✓</span> 知識庫 (共 ${loadedCount} 檔)`;
+            } else {
+                kbStatusHTML = `<span class="icon-fail">✗</span> 知識庫 (未載入)`;
+            }
+            renderStatus();
+            statusText.innerText = "系統就緒！";
+        }
+
+        // --- VRM 載入 ---
+        const loader = new GLTFLoader();
+        loader.crossOrigin = 'anonymous';
+        loader.register((parser) => new VRMLoaderPlugin(parser));
+
+        Promise.all([
+            new Promise((resolve) => {
+                loader.load(VRM_URL, (gltf) => {
+                    const vrm = gltf.userData.vrm;
+                    VRMUtils.rotateVRM0(vrm);
+                    scene.add(vrm.scene);
+                    currentVrm = vrm;
+                    
+                    const leftUpperArm = vrm.humanoid.getNormalizedBoneNode('leftUpperArm');
+                    const rightUpperArm = vrm.humanoid.getNormalizedBoneNode('rightUpperArm');
+                    if (leftUpperArm) { leftUpperArm.rotation.z = -1.1; leftUpperArm.rotation.x = 0.15; }
+                    if (rightUpperArm) { rightUpperArm.rotation.z = 1.1; rightUpperArm.rotation.x = 0.15; }
+
+                    const headNode = vrm.humanoid.getNormalizedBoneNode('head');
+                    if (headNode) {
+                        const headPos = new THREE.Vector3();
+                        headNode.getWorldPosition(headPos);
+                        controls.target.set(headPos.x, headPos.y, headPos.z);
+                        camera.position.set(headPos.x, headPos.y, headPos.z + 1.0);
+                        controls.update();
+                    }
+                    
+                    startBlinking();
+                    resolve();
+                },
+                (progress) => {
+                    const percent = Math.round(100.0 * (progress.loaded / progress.total));
+                    document.getElementById('status-text').innerText = `正在下載模型... ${percent}%`;
+                }, (e) => resolve());
+            }),
+            loadExternalData()
+        ]).then(() => {
+            setTimeout(() => {
+                document.getElementById('loading-screen').style.display = 'none';
+                testApiConnection();
+            }, 500);
+        });
+
+        // --- 動畫 ---
+        const clock = new THREE.Clock();
+        function animate() {
+            requestAnimationFrame(animate);
+            const deltaTime = clock.getDelta();
+            const elapsedTime = clock.elapsedTime;
+
+            if (currentVrm) {
+                currentVrm.update(deltaTime);
+                const spine = currentVrm.humanoid.getNormalizedBoneNode('spine');
+                if (spine) {
+                    spine.rotation.x = Math.sin(elapsedTime * 1.5) * 0.03;
+                    spine.rotation.y = Math.sin(elapsedTime * 0.8) * 0.02;
+                }
+                if (isSpeaking && !isMuted) {
+                    const s = Math.sin(elapsedTime * 15);
+                    currentVrm.expressionManager.setValue('aa', (s + 1) / 2 * 0.7);
+                } else {
+                    const currentVal = currentVrm.expressionManager.getValue('aa');
+                    currentVrm.expressionManager.setValue('aa', THREE.MathUtils.lerp(currentVal, 0, 0.2));
+                }
+            }
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        function startBlinking() {
+            if(!currentVrm) return;
+            const blinkLoop = () => {
+                if (!window.actionActive) {
+                    setTimeout(() => {
+                        currentVrm.expressionManager.setValue('blink', 1);
+                        setTimeout(() => {
+                            currentVrm.expressionManager.setValue('blink', 0);
+                            blinkLoop();
+                        }, 150);
+                    }, Math.random() * 3000 + 2000);
+                } else {
+                    setTimeout(blinkLoop, 1000);
+                }
+            };
+            blinkLoop();
+        }
+
+        // --- 情緒控制 ---
+        const VALID_EMOTIONS = ['neutral', 'happy', 'angry', 'sad', 'relaxed', 'surprised'];
+        function setEmotion(emotionName) {
+            if (!currentVrm) return;
+            if (emotionName === 'joy') emotionName = 'happy';
+            if (emotionName === 'sorrow') emotionName = 'sad';
+            if (emotionName === 'fun') emotionName = 'relaxed';
+            if (!VALID_EMOTIONS.includes(emotionName)) emotionName = 'neutral';
+            
+            updateDebugDisplay(emotionName, null);
+            VALID_EMOTIONS.forEach(emo => currentVrm.expressionManager.setValue(emo, 0));
+            if (emotionName !== 'neutral') currentVrm.expressionManager.setValue(emotionName, 0.8);
+        }
+
+        window.actionActive = false;
+        function triggerAction(actionName, duration) {
+            if (!currentVrm || actionName === 'none') return;
+            updateDebugDisplay(null, `${actionName}`);
+            let shapeName = actionName === 'blink_left' ? 'blinkLeft' : (actionName === 'blink_right' ? 'blinkRight' : 'blink');
+            window.actionActive = true;
+            currentVrm.expressionManager.setValue(shapeName, 1.0);
+            setTimeout(() => {
+                currentVrm.expressionManager.setValue(shapeName, 0);
+                window.actionActive = false;
+                updateDebugDisplay(null, 'Done');
+            }, duration);
+        }
+
+        function updateDebugDisplay(emo, act) {
+            const debugDiv = document.getElementById('emotion-debug');
+            if(emo) debugDiv.innerHTML = debugDiv.innerHTML.replace(/情緒: .*/, `情緒: ${emo}`);
+            if(act) debugDiv.innerHTML = debugDiv.innerHTML.replace(/動作: .*/, `動作: ${act}`);
+        }
+
+        function addMessage(text, type) {
+            const chatDisplay = document.getElementById('chat-display');
+            const div = document.createElement('div');
+            div.className = `message message-${type}`;
+            
+            let safeText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
+            // 處理連結
+            safeText = safeText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            
+            div.innerHTML = safeText;
+            chatDisplay.appendChild(div);
+            chatDisplay.scrollTop = chatDisplay.scrollHeight;
+            return div;
+        }
+
+        function removeMessage(el) { if(el && el.parentNode) el.parentNode.removeChild(el); }
+
+        // --- API 連線檢查 (右上角) ---
+        const statusDot = document.getElementById('status-dot');
+        const statusMsg = document.getElementById('status-msg');
+        const userInput = document.getElementById('user-input');
+        const sendBtn = document.getElementById('send-btn');
+        const muteBtn = document.getElementById('mute-btn');
+
+        async function testApiConnection() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ contents: [{ parts: [{ text: "Hello" }] }] })
+                });
+                if (response.ok) {
+                    statusDot.classList.add('status-connected');
+                    // *** 修正處：文字不再誤導 ***
+                    statusMsg.innerText = "AI 連線正常";
+                    userInput.disabled = false; sendBtn.disabled = false;
+                } else throw new Error();
+            } catch (e) {
+                statusDot.classList.add('status-error');
+                statusMsg.innerText = "連線失敗";
+            }
+        }
+
+        // --- 訊息發送與處理 ---
+        muteBtn.addEventListener('click', () => {
+            isMuted = !isMuted;
+            muteBtn.classList.toggle('muted', isMuted);
+            muteBtn.innerText = isMuted ? '🔇' : '🔊';
+            if(isMuted) { window.speechSynthesis.cancel(); isSpeaking = false; }
+        });
+
+        async function handleSendMessage() {
+            const text = userInput.value.trim();
+            if (!text) return;
+
+            userInput.value = ''; userInput.disabled = true; sendBtn.disabled = true;
+            addMessage(text, 'user');
+            const loadingMsg = addMessage("Thinking...", 'system');
+            
+            chatHistory.push({ role: "user", parts: [{ text: text }] });
+
+            let finalSystemInstruction = "";
+            if (externalSystemPrompt) finalSystemInstruction += externalSystemPrompt;
+            else finalSystemInstruction += `You are a virtual AI character. Reply in Traditional Chinese. Output JSON: { "text": "response", "emotion": "neutral", "action": "none" }`;
+
+            if (externalKnowledge) {
+                finalSystemInstruction += "\n\n====== KNOWLEDGE BASE (HIGH PRIORITY) ======\n" + externalKnowledge + "\n============================================\n";
+            }
+
+            finalSystemInstruction += `\n【INSTRUCTIONS】\n1. Use Knowledge Base first.\n2. Use Google Search if needed.\n3. Return JSON format.`;
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: chatHistory,
+                        systemInstruction: { parts: [{ text: finalSystemInstruction }] },
+                        tools: [{ google_search: {} }]
+                    })
+                });
+
+                const data = await response.json();
+                removeMessage(loadingMsg);
+                
+                let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "Error";
+                let result = { text: rawText, emotion: 'neutral' };
+
+                try {
+                    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+                    if (jsonMatch) result = JSON.parse(jsonMatch[0]);
+                } catch(e) {}
+
+                if(!result.text) result.text = rawText;
+
+                // 簡單的情緒關鍵字補強
+                if(result.emotion === 'neutral') {
+                    if(result.text.match(/(開心|快樂|happy)/)) result.emotion = 'happy';
+                    if(result.text.match(/(難過|悲傷|sad)/)) result.emotion = 'sad';
+                }
+
+                chatHistory.push({ role: "model", parts: [{ text: result.text }] });
+                addMessage(result.text, 'ai');
+                setEmotion(result.emotion);
+                if(result.action) triggerAction(result.action, 2000);
+                speak(result.text);
+
+            } catch (error) {
+                removeMessage(loadingMsg);
+                addMessage("連線發生錯誤，請檢查 API Key 或網路。", 'system');
+            } finally {
+                userInput.disabled = false; sendBtn.disabled = false; userInput.focus();
+            }
+        }
+
+        // --- 語音 ---
+        function speak(text) {
+            if (isMuted) return;
+            const cleanText = text.replace(/\[.*?\]\(.*?\)/g, '').replace(/[^\u4e00-\u9fa5a-zA-Z0-9,.\?]/g, '');
+            if(!cleanText) return;
+            
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(cleanText);
+            u.lang = 'zh-TW';
+            u.onstart = () => isSpeaking = true;
+            u.onend = () => { isSpeaking = false; if(currentVrm) currentVrm.expressionManager.setValue('aa', 0); };
+            window.speechSynthesis.speak(u);
+        }
+
+        sendBtn.addEventListener('click', handleSendMessage);
+        userInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') handleSendMessage(); });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
     </script>
-  </body>
+</body>
 </html>
