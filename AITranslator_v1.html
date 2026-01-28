@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AI 極速即時翻譯 (OpenAI + Gemini)</title>
+    
+    <!-- Tailwind CSS for Modern Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f3f4f6;
+            /* Mobile Viewport Fix */
+            height: 100dvh; 
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1; 
+            border-radius: 20px;   
+        }
+
+        /* Pulse Animation for Recording */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { transform: scale(0.8); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+        
+        .recording-pulse {
+            animation: pulse-ring 2s infinite;
+        }
+
+        /* Loading Dots */
+        .typing-indicator span {
+            display: inline-block;
+            width: 5px;
+            height: 5px;
+            background-color: #3b82f6;
+            border-radius: 50%;
+            animation: typing 1.4s infinite ease-in-out both;
+            margin: 0 2px;
+        }
+        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+        
+        @keyframes typing {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* Message Bubble Transitions */
+        .message-enter {
+            animation: slideIn 0.3s ease-out forwards;
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        @keyframes slideIn {
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="flex flex-col text-slate-800 bg-gray-100 overflow-hidden">
+
+    <!-- Header / Settings Bar -->
+    <header class="bg-white border-b border-gray-200 px-3 py-2 shadow-sm z-20 shrink-0">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row gap-2 items-center justify-between">
+            <div class="flex items-center gap-2 w-full md:w-auto justify-between md:justify-start">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white shrink-0">
+                        <i class="fa-solid fa-language"></i>
+                    </div>
+                    <h1 class="font-bold text-lg tracking-tight whitespace-nowrap">AI 翻譯</h1>
+                </div>
+            </div>
+
+            <!-- Settings Group -->
+            <div class="grid grid-cols-2 md:flex md:flex-row gap-2 w-full md:w-auto items-center">
+                
+                <!-- Language Pair Select -->
+                <select id="langPairSelect" onchange="handleLangPairChange()" class="col-span-2 md:w-auto bg-blue-50 font-bold text-blue-700 border border-blue-200 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
+                    <option value="cn-vn" selected>🇹🇼 中文 ⇄ 🇻🇳 越南文</option>
+                    <option value="cn-en">🇹🇼 中文 ⇄ 🇺🇸 英文</option>
+                </select>
+
+                <!-- Provider Select -->
+                <select id="providerSelect" onchange="handleProviderChange()" class="bg-gray-100 font-medium border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2">
+                    <option value="openai">OpenAI</option>
+                    <option value="gemini">Google Gemini</option>
+                </select>
+
+                <!-- Model Select -->
+                <select id="modelSelect" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 md:w-40 w-full truncate">
+                    <!-- Populated by JS -->
+                </select>
+
+                <!-- API Key Input & Button -->
+                <div class="col-span-2 md:col-span-1 flex gap-2 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-48">
+                        <input type="password" id="apiKeyInput" placeholder="API Key" 
+                               class="w-full bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block pl-3 pr-8 p-2 transition-colors">
+                        <div id="apiStatusIcon" class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-key"></i>
+                        </div>
+                    </div>
+                    <button onclick="validateApiKey()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-medium py-2 px-3 rounded-lg text-sm transition whitespace-nowrap shrink-0">
+                        驗證
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content: Chat History Stream -->
+    <main class="flex-1 overflow-hidden relative w-full max-w-3xl mx-auto flex flex-col">
+        
+        <!-- Conversation Container -->
+        <div id="chatContainer" class="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+            <!-- Intro Message -->
+            <div class="text-center text-gray-400 text-sm mt-4 mb-10">
+                <p>開始說話或輸入文字...</p>
+                <p class="text-xs mt-1">AI 將自動偵測語言、優化標點並翻譯</p>
+                <p class="text-xs mt-1 text-gray-300">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i> 標點由 AI 生成
+                </p>
+                <p class="text-[10px] text-red-300 mt-2 bg-red-50 p-1 rounded border border-red-100 inline-block">
+                    提示：若在本地檔案執行，麥克風需反覆授權是正常安全機制。<br>請部署至 HTTPS 網站以獲得最佳體驗。
+                </p>
+            </div>
+            
+            <!-- Dynamic Content Will Be Appended Here -->
+            
+        </div>
+
+        <!-- Sticky Bottom Input Area -->
+        <div class="bg-white border-t border-gray-200 p-3 pb-safe z-10 shrink-0 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] w-full">
+            <div class="max-w-3xl mx-auto relative flex gap-2 items-end">
+                
+                <!-- Status Message Overlay -->
+                <div id="statusMsg" class="absolute -top-10 left-0 right-0 mx-auto w-fit text-xs font-medium text-blue-600 transition-opacity opacity-0 bg-blue-50 px-3 py-1.5 rounded-full border border-blue-100 shadow-sm text-center z-20">
+                    準備就緒
+                </div>
+
+                <!-- Text Input -->
+                <div class="relative flex-1 bg-gray-50 rounded-2xl border border-gray-300 focus-within:ring-2 focus-within:ring-blue-100 focus-within:border-blue-400 transition-all overflow-hidden min-h-[48px]">
+                     <textarea id="sourceText" rows="1" placeholder="輸入文字..." 
+                        class="w-full p-3 pr-2 resize-none outline-none text-base bg-transparent max-h-32 overflow-y-auto"
+                        style="min-height: 48px;"></textarea>
+                     
+                     <!-- Visualizer for Voice -->
+                     <div id="voiceListeningOverlay" class="absolute bottom-0 left-0 w-full h-1 bg-gray-200 hidden">
+                        <div class="h-full bg-blue-500 animate-pulse w-full"></div>
+                    </div>
+                </div>
+
+                <!-- Speech Language Toggle -->
+                <button id="speechLangBtn" onclick="toggleSpeechLang()" class="shrink-0 h-12 w-14 rounded-xl bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all text-sm font-medium flex flex-col items-center justify-center gap-0 leading-tight select-none">
+                    <span class="text-[10px] text-gray-500 uppercase">聽取</span>
+                    <span id="speechLangText" class="text-xs font-bold truncate w-full text-center px-1">中文</span>
+                </button>
+
+                <!-- Mic Button -->
+                <button id="micBtn" onclick="toggleRecording()" 
+                    class="shrink-0 w-12 h-12 rounded-full bg-white border border-gray-300 shadow-sm flex items-center justify-center text-gray-500 hover:bg-gray-50 hover:text-blue-600 active:scale-95 transition-all text-xl select-none">
+                    <i class="fa-solid fa-microphone"></i>
+                </button>
+
+            </div>
+            <!-- iOS Safe Area Spacer -->
+            <div class="h-[env(safe-area-inset-bottom)] bg-white w-full"></div>
+        </div>
+    </main>
+
+    <!-- JavaScript Logic -->
+    <script>
+        // DOM Elements
+        const langPairSelect = document.getElementById('langPairSelect');
+        const providerSelect = document.getElementById('providerSelect');
+        const modelSelect = document.getElementById('modelSelect');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+        const apiStatusIcon = document.getElementById('apiStatusIcon');
+        const sourceText = document.getElementById('sourceText');
+        const micBtn = document.getElementById('micBtn');
+        const speechLangBtn = document.getElementById('speechLangBtn');
+        const speechLangText = document.getElementById('speechLangText');
+        const statusMsg = document.getElementById('statusMsg');
+        const voiceOverlay = document.getElementById('voiceListeningOverlay');
+        const chatContainer = document.getElementById('chatContainer');
+
+        // Config Data
+        const PROVIDERS = {
+            openai: {
+                name: 'OpenAI',
+                storageKey: 'openai_api_key',
+                placeholder: 'OpenAI Key',
+                models: [
+                    { id: 'gpt-4o', name: 'GPT-4o (快速)' },
+                    { id: 'gpt-5.2', name: 'GPT-5.2 (旗艦)' },
+                    { id: 'o3', name: 'OpenAI o3' }
+                ]
+            },
+            gemini: {
+                name: 'Google Gemini',
+                storageKey: 'gemini_api_key',
+                placeholder: 'Gemini Key',
+                models: [
+                    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+                    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+                    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' }
+                ]
+            }
+        };
+
+        const LANG_PAIRS = {
+            'cn-en': { 
+                label1: '中文', code1: 'zh-TW', 
+                label2: '英文', code2: 'en-US',
+                hint1: '中文'
+            },
+            'cn-vn': { 
+                label1: '中文', code1: 'zh-TW', 
+                label2: '越南文', code2: 'vi-VN',
+                hint1: '中文'
+            }
+        };
+
+        // State Management
+        let currentProvider = 'openai';
+        let currentLangPair = 'cn-vn'; // Default to CN-VN
+        let currentSpeechLangCode = 'zh-TW'; 
+        
+        let apiKeys = {
+            openai: localStorage.getItem('openai_api_key') || '',
+            gemini: localStorage.getItem('gemini_api_key') || ''
+        };
+        
+        let recognition = null;
+        let isRecording = false;
+        let isTranslating = false;
+        let silenceTimer = null;
+        let finalTranscript = ''; 
+        let lastSubmittedText = ''; // Prevents ghost loops
+        
+        // TIMING CONFIGURATION
+        const SILENCE_DELAY = 1500; 
+
+        // --- Initialization ---
+        function init() {
+            handleProviderChange();
+            handleLangPairChange(); // Init speech lang text
+        }
+
+        // --- Language Pair & Speech Lang Logic ---
+        function handleLangPairChange() {
+            currentLangPair = langPairSelect.value;
+            const pairConfig = LANG_PAIRS[currentLangPair];
+            setSpeechLang(pairConfig.code1, pairConfig.label1, pairConfig.hint1);
+        }
+
+        function toggleSpeechLang() {
+            const pairConfig = LANG_PAIRS[currentLangPair];
+            if (currentSpeechLangCode === pairConfig.code1) {
+                setSpeechLang(pairConfig.code2, pairConfig.label2);
+            } else {
+                setSpeechLang(pairConfig.code1, pairConfig.label1, pairConfig.hint1);
+            }
+            
+            if (isRecording) {
+                recognition.stop();
+            }
+        }
+
+        function setSpeechLang(code, label, hint) {
+            currentSpeechLangCode = code;
+            
+            const isForeign = (code !== 'zh-TW');
+            if (isForeign) {
+                speechLangBtn.className = "shrink-0 h-12 w-14 rounded-xl bg-purple-100 border border-purple-300 text-purple-700 hover:bg-purple-200 active:scale-95 transition-all text-sm font-medium flex flex-col items-center justify-center gap-0 leading-tight select-none";
+                speechLangText.textContent = label;
+            } else {
+                speechLangBtn.className = "shrink-0 h-12 w-14 rounded-xl bg-gray-100 border border-gray-300 text-gray-700 hover:bg-gray-200 active:scale-95 transition-all text-sm font-medium flex flex-col items-center justify-center gap-0 leading-tight select-none";
+                speechLangText.textContent = label; // Simplified text for mobile
+            }
+
+            if (recognition) {
+                recognition.lang = code;
+            }
+        }
+
+        // --- Provider Logic ---
+        function handleProviderChange() {
+            currentProvider = providerSelect.value;
+            const config = PROVIDERS[currentProvider];
+
+            modelSelect.innerHTML = '';
+            config.models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name;
+                modelSelect.appendChild(opt);
+            });
+
+            apiKeyInput.placeholder = config.placeholder;
+            apiKeyInput.value = apiKeys[currentProvider];
+            
+            updateApiStatus(false);
+            if (apiKeyInput.value) {
+                apiStatusIcon.innerHTML = '<i class="fa-solid fa-circle-question text-gray-400"></i>';
+            }
+        }
+
+        // --- Helper: Auto-resize Textarea ---
+        sourceText.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+            if(this.value === '') this.style.height = '48px';
+        });
+        
+        apiKeyInput.addEventListener('input', (e) => {
+            apiKeys[currentProvider] = e.target.value.trim();
+            updateApiStatus(false); 
+        });
+
+        // --- Helper: Safe Recognition Start ---
+        function safeStartRecognition() {
+            if (!recognition) return;
+            try {
+                recognition.lang = currentSpeechLangCode;
+                const p = recognition.start();
+                if (p && typeof p.catch === 'function') {
+                    p.catch(e => {
+                        if (e.name !== 'InvalidStateError') {
+                            console.log("Async recognition start error suppressed:", e);
+                        }
+                    });
+                }
+            } catch (e) {
+                if (e.name !== 'InvalidStateError') {
+                    console.warn("Recognition start suppressed:", e);
+                }
+            }
+        }
+
+        // --- Helper: Sanitize API Key ---
+        function sanitizeApiKey(key) {
+            return key.replace(/[^\x00-\x7F]/g, "").trim();
+        }
+
+        // --- 1. API Key Validation ---
+        
+        async function validateApiKey() {
+            let key = apiKeyInput.value.trim();
+            
+            if (!key) {
+                showStatus('請輸入 Key', 'text-red-500');
+                return;
+            }
+
+            if (/[^\x00-\x7F]/.test(key)) {
+                showStatus('格式錯誤', 'text-red-500');
+                key = sanitizeApiKey(key);
+                apiKeyInput.value = key; 
+                if (!key) return; 
+            }
+
+            showStatus(`驗證中...`, 'text-blue-500');
+            
+            try {
+                let isValid = false;
+
+                if (currentProvider === 'openai') {
+                    const response = await fetch('https://api.openai.com/v1/models', {
+                        method: 'GET',
+                        headers: { 'Authorization': `Bearer ${key}` }
+                    });
+                    isValid = response.ok;
+                } else if (currentProvider === 'gemini') {
+                    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=1`, {
+                        method: 'GET'
+                    });
+                    isValid = response.ok;
+                }
+
+                if (isValid) {
+                    localStorage.setItem(PROVIDERS[currentProvider].storageKey, key);
+                    apiKeys[currentProvider] = key;
+                    updateApiStatus(true);
+                    showStatus('驗證成功', 'text-green-600');
+                } else {
+                    updateApiStatus(false);
+                    showStatus('無效 Key', 'text-red-500');
+                }
+            } catch (error) {
+                console.error(error);
+                updateApiStatus(false);
+                showStatus('連線錯誤', 'text-red-500');
+            }
+        }
+
+        function updateApiStatus(isValid) {
+            const input = apiKeyInput;
+            const icon = apiStatusIcon;
+            
+            if (isValid) {
+                input.classList.remove('border-gray-300', 'border-red-500', 'focus:border-blue-500');
+                input.classList.add('border-green-500', 'focus:border-green-500', 'bg-green-50');
+                icon.innerHTML = '<i class="fa-solid fa-check text-green-500"></i>';
+            } else {
+                input.classList.remove('border-gray-300', 'border-green-500', 'bg-green-50');
+                input.classList.remove('focus:border-green-500');
+                if (input.value === '') {
+                     input.classList.remove('border-red-500', 'focus:border-red-500', 'bg-red-50');
+                     icon.innerHTML = '<i class="fa-solid fa-key"></i>';
+                } else {
+                     input.classList.add('border-red-500', 'focus:border-red-500', 'bg-red-50');
+                     icon.innerHTML = '<i class="fa-solid fa-xmark text-red-500"></i>';
+                }
+            }
+        }
+
+        // --- 2. Speech Recognition Setup ---
+
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = currentSpeechLangCode; 
+            
+            recognition.onstart = () => {
+                isRecording = true;
+                updateMicUI(true);
+                showStatus('聆聽: ' + speechLangText.textContent, 'text-blue-600');
+            };
+
+            recognition.onerror = (event) => {
+                if (event.error === 'no-speech' || event.error === 'aborted') return;
+                
+                console.error("Speech Error:", event.error);
+                if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+                    stopRecording(); 
+                    showStatus('權限被拒', 'text-red-500');
+                } else {
+                    stopRecording();
+                }
+            };
+
+            recognition.onend = () => {
+                if (!isTranslating && isRecording) {
+                    safeStartRecognition();
+                } else if (!isTranslating && !isRecording) {
+                    updateMicUI(false);
+                    showStatus('點擊麥克風', 'text-gray-400');
+                }
+            };
+
+            recognition.onresult = (event) => {
+                if (isTranslating) return;
+
+                let interimTranscript = '';
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                    if (event.results[i].isFinal) {
+                        finalTranscript += event.results[i][0].transcript;
+                    } else {
+                        interimTranscript += event.results[i][0].transcript;
+                    }
+                }
+
+                const fullText = (finalTranscript + interimTranscript).trim();
+                
+                // --- FIX: Prevent ghost updates from same text ---
+                if (fullText === '' || fullText === lastSubmittedText) {
+                    return;
+                }
+
+                sourceText.value = fullText;
+                sourceText.style.height = 'auto';
+                sourceText.style.height = (sourceText.scrollHeight) + 'px';
+                
+                clearTimeout(silenceTimer);
+
+                if (fullText && !isTranslating) {
+                    silenceTimer = setTimeout(() => {
+                        if (sourceText.value.trim().length > 0) {
+                             handleInputSubmit();
+                        }
+                    }, SILENCE_DELAY);
+                }
+            };
+        } else {
+            micBtn.style.display = 'none';
+            speechLangBtn.style.display = 'none';
+            showStatus('不支援語音', 'text-red-500');
+        }
+
+        // --- 3. Core Logic: Input Handling ---
+
+        sourceText.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault(); 
+                handleInputSubmit();
+            }
+        });
+
+        function toggleRecording() {
+            if (!recognition) return;
+            const key = apiKeys[currentProvider];
+            
+            if (!isRecording && !key) {
+                showStatus('請輸入 Key', 'text-red-500');
+                apiKeyInput.focus();
+                apiKeyInput.classList.add('animate-pulse');
+                setTimeout(() => apiKeyInput.classList.remove('animate-pulse'), 500);
+                return;
+            }
+
+            if (isRecording) {
+                stopRecording();
+            } else {
+                startRecording();
+            }
+        }
+
+        function startRecording() {
+            finalTranscript = ''; 
+            if (sourceText.value.trim() === '') finalTranscript = '';
+            else finalTranscript = sourceText.value; 
+            
+            isRecording = true; 
+            safeStartRecognition(); 
+        }
+
+        function stopRecording() {
+            isRecording = false; 
+            recognition.stop();
+            clearTimeout(silenceTimer);
+            updateMicUI(false);
+        }
+
+        function updateMicUI(active) {
+            if (active) {
+                micBtn.classList.add('bg-red-500', 'text-white', 'recording-pulse', 'border-red-600');
+                micBtn.classList.remove('bg-white', 'text-gray-500', 'border-gray-300');
+                voiceOverlay.classList.remove('hidden');
+            } else {
+                micBtn.classList.remove('bg-red-500', 'text-white', 'recording-pulse', 'border-red-600');
+                micBtn.classList.add('bg-white', 'text-gray-500', 'border-gray-300');
+                voiceOverlay.classList.add('hidden');
+            }
+        }
+
+        async function handleInputSubmit() {
+            const textToTranslate = sourceText.value.trim();
+            if (!textToTranslate) return; 
+            
+            // Record this text to prevent echo/ghost loops
+            lastSubmittedText = textToTranslate;
+
+            // DO NOT STOP RECOGNITION to minimize popups on local files
+            // if (isRecording) recognition.stop();
+            
+            isTranslating = true; 
+            clearTimeout(silenceTimer);
+            
+            sourceText.value = '';
+            sourceText.style.height = '48px';
+            finalTranscript = '';
+
+            const resultId = 'msg-' + Date.now();
+            const userTextId = 'user-' + resultId;
+            appendChatGroup(textToTranslate, resultId, userTextId);
+
+            let result = { corrected: textToTranslate, translation: "" };
+            
+            if (currentProvider === 'openai') {
+                result = await callOpenAI(textToTranslate);
+            } else {
+                result = await callGemini(textToTranslate);
+            }
+
+            updateChatResult(resultId, result.translation);
+            updateUserText(userTextId, result.corrected);
+
+            isTranslating = false;
+            
+            if (isRecording) {
+                showStatus('聆聽中...', 'text-blue-600');
+            } else {
+                showStatus('翻譯完成', 'text-green-600');
+            }
+        }
+
+        // --- 4. UI Rendering ---
+
+        function appendChatGroup(userText, resultId, userTextId) {
+            const div = document.createElement('div');
+            div.className = 'message-enter bg-white p-4 rounded-2xl shadow-sm border border-gray-100';
+            div.innerHTML = `
+                <div class="mb-2 group relative">
+                    <p id="${userTextId}" class="text-base md:text-lg text-gray-800 font-medium leading-relaxed break-words">${escapeHtml(userText)}</p>
+                </div>
+                <div class="flex items-start gap-2 pt-2 border-t border-gray-50">
+                    <div class="mt-1 w-5 h-5 rounded bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 text-xs">
+                        <i class="fa-solid fa-language"></i>
+                    </div>
+                    <div id="${resultId}" class="text-base md:text-lg text-blue-600 leading-relaxed break-words flex-1">
+                        <div class="typing-indicator mt-2"><span></span><span></span><span></span></div>
+                    </div>
+                    <button onclick="copyText('${resultId}')" class="text-gray-300 hover:text-blue-500 transition px-2">
+                        <i class="fa-regular fa-copy"></i>
+                    </button>
+                </div>
+            `;
+            chatContainer.appendChild(div);
+            scrollToBottom();
+        }
+
+        function updateChatResult(elementId, text) {
+            const el = document.getElementById(elementId);
+            if (el) el.innerText = text;
+        }
+
+        function updateUserText(elementId, text) {
+            const el = document.getElementById(elementId);
+            if (el) el.innerText = text;
+        }
+
+        function scrollToBottom() {
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+        
+        window.copyText = function(elementId) {
+            const el = document.getElementById(elementId);
+            if (!el) return;
+            const text = el.innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                showStatus('已複製', 'text-green-600');
+            }).catch(err => { console.error(err); });
+        }
+
+        // --- 5. API Functions ---
+        
+        function parseAIResponse(responseText, originalInput) {
+            let corrected = originalInput;
+            let translation = responseText;
+
+            const lines = responseText.split('\n');
+            let foundCorrected = false;
+            let foundTranslation = false;
+
+            lines.forEach(line => {
+                if (line.startsWith('Corrected:')) {
+                    corrected = line.replace('Corrected:', '').trim();
+                    foundCorrected = true;
+                } else if (line.startsWith('Translation:')) {
+                    translation = line.replace('Translation:', '').trim();
+                    foundTranslation = true;
+                }
+            });
+
+            if (!foundTranslation && !foundCorrected) {
+                translation = responseText; 
+            } else if (foundCorrected && !foundTranslation) {
+                translation = "(翻譯失敗)";
+            }
+
+            return { corrected, translation };
+        }
+
+        function getSystemPrompt() {
+            const pair = document.getElementById('langPairSelect').value;
+            let instructions = "";
+
+            if (pair === 'cn-vn') {
+                instructions = "If input is Chinese (Traditional/Simplified), translate to Vietnamese. If input is Vietnamese, translate to Traditional Chinese (Taiwan).";
+            } else {
+                instructions = "If input is Chinese (Traditional/Simplified), translate to English. If input is English, translate to Traditional Chinese (Taiwan).";
+            }
+
+            return `You are a professional translator and editor.
+Step 1: Punctuate the user's input text naturally (add commas, periods, question marks) for better readability. Do NOT change the meaning.
+Step 2: Translate the punctuated text. ${instructions}
+
+Output exactly in this format:
+Corrected: <Punctuated_Text>
+Translation: <Translated_Text>`;
+        }
+
+        async function callOpenAI(text) {
+            let key = apiKeys.openai;
+            if (!key) return { corrected: text, translation: "請輸入 Key" };
+            key = sanitizeApiKey(key);
+
+            const model = modelSelect.value;
+            const messages = [
+                { role: "system", content: getSystemPrompt() },
+                { role: "user", content: text }
+            ];
+
+            try {
+                const response = await fetch('https://api.openai.com/v1/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${key}`
+                    },
+                    body: JSON.stringify({ model, messages, temperature: 0.3 })
+                });
+                const data = await response.json();
+                if (response.ok) {
+                    const raw = data.choices[0].message.content.trim();
+                    return parseAIResponse(raw, text);
+                }
+                return { corrected: text, translation: `Error: ${data.error?.message}` };
+            } catch (error) {
+                return { corrected: text, translation: "網路連線錯誤" };
+            }
+        }
+
+        async function callGemini(text) {
+            let key = apiKeys.gemini;
+            if (!key) return { corrected: text, translation: "請輸入 Key" };
+            key = sanitizeApiKey(key);
+
+            const model = modelSelect.value; 
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`;
+            
+            const payload = {
+                system_instruction: {
+                    parts: [{ text: getSystemPrompt() }]
+                },
+                contents: [{
+                    role: "user",
+                    parts: [{ text: text }]
+                }]
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                
+                if (response.ok && data.candidates && data.candidates.length > 0) {
+                    const raw = data.candidates[0].content.parts[0].text.trim();
+                    return parseAIResponse(raw, text);
+                } else {
+                    return { corrected: text, translation: `Error: ${data.error?.message || 'Unknown Error'}` };
+                }
+            } catch (error) {
+                return { corrected: text, translation: "連線錯誤" };
+            }
+        }
+
+        function showStatus(msg, colorClass) {
+            statusMsg.textContent = msg;
+            statusMsg.className = `absolute -top-10 left-0 right-0 mx-auto w-fit text-xs font-medium transition-opacity opacity-100 bg-white border shadow-sm px-3 py-1.5 rounded-full z-20 ${colorClass}`;
+            setTimeout(() => {
+                statusMsg.classList.remove('opacity-100');
+                statusMsg.classList.add('opacity-0');
+            }, 3000);
+        }
+
+        // Initialize on load
+        init();
+
+    </script>
+</body>
+</html>
