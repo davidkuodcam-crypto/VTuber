@@ -135,9 +135,6 @@
                 <p class="text-xs mt-1 text-gray-300">
                     <i class="fa-solid fa-wand-magic-sparkles"></i> 標點由 AI 生成
                 </p>
-                <p class="text-[10px] text-red-300 mt-2 bg-red-50 p-1 rounded border border-red-100 inline-block">
-                    提示：若在本地檔案執行，麥克風需反覆授權是正常安全機制。<br>請部署至 HTTPS 網站以獲得最佳體驗。
-                </p>
             </div>
             
             <!-- Dynamic Content Will Be Appended Here -->
@@ -251,7 +248,6 @@
         let isTranslating = false;
         let silenceTimer = null;
         let finalTranscript = ''; 
-        let lastSubmittedText = ''; // Prevents ghost loops
         
         // TIMING CONFIGURATION
         const SILENCE_DELAY = 1500; 
@@ -333,20 +329,23 @@
             updateApiStatus(false); 
         });
 
-        // --- Helper: Safe Recognition Start ---
+        // --- Helper: Safe Recognition Start (FIXED for Robustness) ---
         function safeStartRecognition() {
             if (!recognition) return;
             try {
                 recognition.lang = currentSpeechLangCode;
+                // Capture if start() returns a Promise (some envs do)
                 const p = recognition.start();
                 if (p && typeof p.catch === 'function') {
                     p.catch(e => {
+                        // Ignore specific error: recognition already started
                         if (e.name !== 'InvalidStateError') {
                             console.log("Async recognition start error suppressed:", e);
                         }
                     });
                 }
             } catch (e) {
+                // Ignore specific error: recognition already started
                 if (e.name !== 'InvalidStateError') {
                     console.warn("Recognition start suppressed:", e);
                 }
@@ -446,8 +445,7 @@
             };
 
             recognition.onerror = (event) => {
-                if (event.error === 'no-speech' || event.error === 'aborted') return;
-                
+                if (event.error === 'no-speech') return;
                 console.error("Speech Error:", event.error);
                 if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
                     stopRecording(); 
@@ -478,20 +476,14 @@
                     }
                 }
 
-                const fullText = (finalTranscript + interimTranscript).trim();
-                
-                // --- FIX: Prevent ghost updates from same text ---
-                if (fullText === '' || fullText === lastSubmittedText) {
-                    return;
-                }
-
+                const fullText = finalTranscript + interimTranscript;
                 sourceText.value = fullText;
                 sourceText.style.height = 'auto';
                 sourceText.style.height = (sourceText.scrollHeight) + 'px';
                 
                 clearTimeout(silenceTimer);
 
-                if (fullText && !isTranslating) {
+                if ((finalTranscript || interimTranscript) && !isTranslating) {
                     silenceTimer = setTimeout(() => {
                         if (sourceText.value.trim().length > 0) {
                              handleInputSubmit();
@@ -564,13 +556,8 @@
         async function handleInputSubmit() {
             const textToTranslate = sourceText.value.trim();
             if (!textToTranslate) return; 
-            
-            // Record this text to prevent echo/ghost loops
-            lastSubmittedText = textToTranslate;
 
-            // DO NOT STOP RECOGNITION to minimize popups on local files
-            // if (isRecording) recognition.stop();
-            
+            if (isRecording) recognition.stop();
             isTranslating = true; 
             clearTimeout(silenceTimer);
             
@@ -597,6 +584,9 @@
             
             if (isRecording) {
                 showStatus('聆聽中...', 'text-blue-600');
+                setTimeout(() => {
+                    if (isRecording) safeStartRecognition();
+                }, 300); // Increased buffer to 300ms
             } else {
                 showStatus('翻譯完成', 'text-green-600');
             }
