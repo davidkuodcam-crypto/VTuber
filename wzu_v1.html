@@ -3,13 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VRM Overlay Tool</title>
+    <title>VRM AI Presenter</title>
     <style>
         body {
             margin: 0;
             overflow: hidden;
             background-color: #000;
             font-family: 'Segoe UI', sans-serif;
+            user-select: none; 
         }
 
         /* 1. 背景層 */
@@ -33,7 +34,6 @@
             height: 100vh;
             display: block;
             z-index: 1;
-            /* Canvas 本身不攔截事件，交給 Hitbox 處理 */
             pointer-events: none;
         }
 
@@ -42,13 +42,99 @@
             position: absolute;
             z-index: 10; 
             cursor: grab;
-            background: rgba(255, 0, 0, 0.0); /* 透明 */
+            background: rgba(255, 0, 0, 0.0);
             border-radius: 20px;
             display: none; 
             touch-action: none; 
         }
         #character-hitbox:active {
             cursor: grabbing;
+        }
+
+        /* 4. 繪圖層 (Drawing Canvas) */
+        #drawing-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: 20; /* 在角色判定框之上 */
+            pointer-events: none; /* 預設不攔截 */
+            touch-action: none;
+        }
+
+        /* 5. 簡報控制台 */
+        #control-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            pointer-events: auto;
+            min-width: 160px;
+        }
+        #control-panel h3 {
+            margin: 0 0 5px 0;
+            font-size: 16px;
+            color: #333;
+            text-align: center;
+        }
+
+        /* 按鈕群組 */
+        .btn-group {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+        }
+
+        button {
+            background: #2563eb;
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 600;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        button:hover { background: #1d4ed8; transform: translateY(-1px); }
+        
+        /* 狀態樣式 */
+        #btn-toggle-char.active { background: #dc2626; }
+        #btn-dance { background: #10b981; display: none; }
+        #btn-dance:hover { background: #059669; }
+
+        /* 工具按鈕樣式 */
+        .tool-btn {
+            background: #f3f4f6;
+            color: #4b5563;
+            border: 1px solid #e5e7eb;
+            position: relative;
+        }
+        .tool-btn:hover { background: #e5e7eb; }
+        .tool-btn.active {
+            background: #2563eb;
+            color: white;
+            border-color: #2563eb;
+            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+        }
+        
+        /* SVG Icon 樣式 */
+        .icon-svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
         }
 
         /* Loading */
@@ -77,7 +163,6 @@
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
     
-    <!-- Import Maps -->
     <script type="importmap">
         {
             "imports": {
@@ -93,9 +178,33 @@
 
     <iframe id="webpage-frame" src="https://a001.wzu.edu.tw/"></iframe>
 
-    <!-- 判定框元素 -->
+    <!-- 繪圖層 -->
+    <canvas id="drawing-canvas"></canvas>
+
+    <!-- 簡報控制台 -->
+    <div id="control-panel">
+        <h3>簡報控制台</h3>
+        <button id="btn-toggle-char">顯示虛擬人物</button>
+        <button id="btn-dance">跳舞</button>
+        
+        <div class="btn-group" style="margin-top: 5px; border-top: 1px solid #eee; padding-top: 10px;">
+            <button id="btn-tool-mouse" class="tool-btn active" title="操作網頁/拖曳角色">🖱️</button>
+            <button id="btn-tool-pen" class="tool-btn" title="畫筆 (左鍵)">✏️</button>
+            <button id="btn-tool-eraser" class="tool-btn" title="橡皮擦 (左鍵)">
+                <!-- SVG Eraser Icon -->
+                <svg class="icon-svg" viewBox="0 0 24 24">
+                    <path d="M15.14,3c-0.51,0-1.02,0.2-1.41,0.59L2.59,14.73C1.81,15.51,1.81,16.77,2.59,17.55l5.86,5.86
+                        C8.84,23.8,9.35,24,9.86,24s1.02-0.2,1.41-0.59l11.14-11.14c0.78-0.78,0.78-2.05,0-2.83l-5.86-5.86C16.16,3.2,15.65,3,15.14,3z
+                         M9.86,22.14L4,16.28l8.48-8.49l5.86,5.86L9.86,22.14z"/>
+                </svg>
+            </button>
+            <button id="btn-tool-clear" class="tool-btn" title="清除全部" style="background-color: #fee2e2; color: #dc2626; border-color: #fecaca;">
+                🗑️
+            </button>
+        </div>
+    </div>
+
     <div id="character-hitbox"></div>
-    
     <div id="loading-overlay"><div class="spinner"></div></div>
     <div id="canvas-container"></div>
 
@@ -105,18 +214,13 @@
         import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
         import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 
-        // --- Configuration ---
+        // --- Config ---
         const MODEL_URL = 'https://davidkuodcam-crypto.github.io/VTuber/AvatarSample_C.vrm';
         const ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Taunt_with_Skin.vrma';
         const SPECIAL_ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Breakdance_Freeze_Var_3.vrma';
         
-        // Physics Params
-        const DRAG_STIFFNESS = 300.0;
-        const DRAG_FRICTION = 0.85;
-
-        // Character Dimensions
-        const CHAR_HALF_WIDTH = 0.4;
-        const CHAR_HEIGHT = 1.6;
+        const GEMINI_API_KEY = 'AIzaSyB2E7V3PMcU8u5MGLDxybLVC0XZiCO7MCY';
+        const GEMINI_MODEL = 'gemini-2.5-flash-preview-09-2025';
 
         // --- State ---
         let scene, camera, renderer, clock, mixer;
@@ -124,74 +228,277 @@
         let idleAction = null;
         let specialAction = null;
         let screenBounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
-
-        // Interaction State
+        let isCharacterVisible = false;
+        
+        // Interaction
         const mouse = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
         let isDragging = false;
         let isPerformingSpecial = false; 
-        
         let dragPlane = new THREE.Plane();
         let targetPosition = new THREE.Vector3();
-        let dragOffset = new THREE.Vector3(); // 新增：拖曳偏差值
+        let dragOffset = new THREE.Vector3(); 
         let velocity = new THREE.Vector3(0, 0, 0);
+
+        // Speech
+        let isSpeaking = false;
+        let synth = window.speechSynthesis;
+
+        // Drawing State
+        let drawingMode = 'none'; // 'none', 'pen', 'eraser'
+        let isDrawing = false;
+        let ctx;
 
         // DOM
         const container = document.getElementById('canvas-container');
         const hitbox = document.getElementById('character-hitbox'); 
         const loadingOverlay = document.getElementById('loading-overlay');
-        const iframeFrame = document.getElementById('webpage-frame'); // 取得 iframe
+        const iframeFrame = document.getElementById('webpage-frame'); 
+        const btnToggle = document.getElementById('btn-toggle-char');
+        const btnDance = document.getElementById('btn-dance');
+        
+        const drawingCanvas = document.getElementById('drawing-canvas');
+        const btnToolMouse = document.getElementById('btn-tool-mouse');
+        const btnToolPen = document.getElementById('btn-tool-pen');
+        const btnToolEraser = document.getElementById('btn-tool-eraser');
+        const btnToolClear = document.getElementById('btn-tool-clear');
 
         function init() {
-            // 1. Scene
-            scene = new THREE.Scene();
+            btnToggle.addEventListener('click', toggleCharacter);
+            btnDance.addEventListener('click', playSpecialAnimation);
 
-            // 2. Camera
+            // Tool Buttons
+            btnToolMouse.addEventListener('click', () => setDrawingMode('none'));
+            btnToolPen.addEventListener('click', () => setDrawingMode('pen'));
+            btnToolEraser.addEventListener('click', () => setDrawingMode('eraser'));
+            btnToolClear.addEventListener('click', clearCanvas);
+
+            // Drawing Canvas Init
+            ctx = drawingCanvas.getContext('2d');
+            resizeDrawingCanvas();
+            
+            // Drawing Events (Left Click now)
+            drawingCanvas.addEventListener('mousedown', onCanvasMouseDown);
+            window.addEventListener('mousemove', onCanvasMouseMove);
+            window.addEventListener('mouseup', onCanvasMouseUp);
+
+            scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50.0);
             camera.position.set(0.0, 1.0, 6.0); 
 
-            // 3. Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             renderer.outputColorSpace = THREE.SRGBColorSpace;
             container.appendChild(renderer.domElement);
 
-            // 4. Lights
             const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 1.0);
             scene.add(hemiLight);
             const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
             dirLight.position.set(5, 10, 5);
             scene.add(dirLight);
 
-            // 5. Events
             hitbox.addEventListener('mousedown', onHitboxMouseDown);
-            hitbox.addEventListener('touchstart', onHitboxTouchStart, {passive: false});
-
             window.addEventListener('mousemove', onGlobalMouseMove);
             window.addEventListener('mouseup', onGlobalMouseUp);
-            window.addEventListener('touchmove', onGlobalTouchMove, {passive: false});
-            window.addEventListener('touchend', onGlobalMouseUp);
-
             window.addEventListener('resize', onWindowResize);
 
             clock = new THREE.Clock();
-
-            // 初始計算邊界
             updateBoundaries();
-
+            
             loadAssets();
             animate();
         }
 
+        // --- Drawing Logic ---
+        function resizeDrawingCanvas() {
+            drawingCanvas.width = window.innerWidth;
+            drawingCanvas.height = window.innerHeight;
+        }
+
+        function setDrawingMode(mode) {
+            drawingMode = mode;
+            
+            // UI Update
+            btnToolMouse.classList.toggle('active', mode === 'none');
+            btnToolPen.classList.toggle('active', mode === 'pen');
+            btnToolEraser.classList.toggle('active', mode === 'eraser');
+
+            // Pointer Events Control
+            if (mode === 'none') {
+                drawingCanvas.style.pointerEvents = 'none'; // 讓滑鼠穿透到網頁/角色
+                container.style.cursor = 'default';
+            } else {
+                drawingCanvas.style.pointerEvents = 'auto'; // 攔截滑鼠以繪圖
+                drawingCanvas.style.cursor = mode === 'eraser' ? 'cell' : 'crosshair';
+            }
+        }
+
+        function clearCanvas() {
+            ctx.clearRect(0, 0, drawingCanvas.width, drawingCanvas.height);
+        }
+
+        function onCanvasMouseDown(e) {
+            // 左鍵 (button 0) 且在繪圖模式
+            if (e.button === 0 && drawingMode !== 'none') {
+                isDrawing = true;
+                ctx.beginPath();
+                ctx.moveTo(e.clientX, e.clientY);
+                ctx.lineWidth = drawingMode === 'pen' ? 3 : 20;
+                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'red';
+                // 橡皮擦模式使用 destination-out
+                ctx.globalCompositeOperation = drawingMode === 'eraser' ? 'destination-out' : 'source-over';
+            }
+        }
+
+        function onCanvasMouseMove(e) {
+            if (isDrawing && drawingMode !== 'none') {
+                ctx.lineTo(e.clientX, e.clientY);
+                ctx.stroke();
+            }
+        }
+
+        function onCanvasMouseUp(e) {
+            if (e.button === 0) {
+                isDrawing = false;
+            }
+        }
+
+        // --- AI Generation Logic ---
+        async function generateAndSpeak() {
+            const prompt = `
+                請用繁體中文介紹文藻外語大學，字數嚴格限制在50字以內。
+                重要要求：
+                1. 每次回答請採用不同的切入點或語氣（例如：有時強調國際化、有時強調外語專業、有時強調校園熱情），讓每次生成的內容都有新鮮感。
+                2. 只能包含中文和英文，絕對不要包含任何表情符號、Markdown符號、Hashtag或非語言的標點符號。
+                3. 直接輸出講稿內容，不要有開頭問候語。
+            `;
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+            const payload = { contents: [{ parts: [{ text: prompt }] }] };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+                
+                if (text && isCharacterVisible) {
+                    console.log("AI Generated Intro:", text);
+                    speak(text);
+                }
+            } catch (error) {
+                console.error("AI Generation Error:", error);
+                if (isCharacterVisible) {
+                    speak("文藻外語大學是台灣唯一的外語大學，致力於培養具有國際觀的專業外語人才。");
+                }
+            }
+        }
+
+        // --- Speech Logic ---
+        function stopSpeaking() {
+            if (synth.speaking) {
+                synth.cancel();
+            }
+            isSpeaking = false;
+        }
+
+        function speak(text) {
+            stopSpeaking();
+            if (!text) return;
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-TW'; 
+            utterance.rate = 1.0;
+            
+            utterance.onstart = () => { isSpeaking = true; };
+            utterance.onend = () => { isSpeaking = false; };
+            utterance.onerror = () => { isSpeaking = false; };
+
+            synth.speak(utterance);
+        }
+
+        // --- Character Logic ---
+        function toggleCharacter() {
+            if (!currentVrm) return;
+
+            isCharacterVisible = !isCharacterVisible;
+            currentVrm.scene.visible = isCharacterVisible;
+
+            if (isCharacterVisible) {
+                currentVrm.scene.position.set(0, -1.0, 0);
+                targetPosition.copy(currentVrm.scene.position);
+                velocity.set(0, 0, 0);
+                
+                hitbox.style.display = 'block';
+                updateHitbox();
+                
+                btnToggle.textContent = '隱藏虛擬人物';
+                btnToggle.classList.add('active');
+                btnDance.style.display = 'block';
+                
+                generateAndSpeak();
+            } else {
+                hitbox.style.display = 'none';
+                isDragging = false;
+                container.style.cursor = 'default';
+                iframeFrame.style.pointerEvents = 'auto';
+                
+                btnToggle.textContent = '顯示虛擬人物';
+                btnToggle.classList.remove('active');
+                btnDance.style.display = 'none';
+                
+                stopSpeaking();
+            }
+        }
+
+        // --- Animation Loop ---
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.05);
+            
+            if (currentVrm && isCharacterVisible) {
+                const pos = currentVrm.scene.position;
+                if (!isPerformingSpecial) {
+                    if (isDragging) {
+                        const displacement = new THREE.Vector3().subVectors(targetPosition, pos);
+                        const force = displacement.multiplyScalar(300.0); 
+                        velocity.add(force.multiplyScalar(delta));
+                        velocity.multiplyScalar(0.85); 
+                        pos.add(velocity.clone().multiplyScalar(delta));
+                    } else {
+                        velocity.set(0, 0, 0); 
+                    }
+                    pos.x = Math.max(screenBounds.minX + 0.4, Math.min(screenBounds.maxX - 0.4, pos.x));
+                    pos.y = Math.max(screenBounds.minY, Math.min(screenBounds.maxY - 1.6, pos.y));
+                }
+                currentVrm.scene.rotation.y = 0; 
+                updateHitbox();
+
+                if (isSpeaking) {
+                    const s = Math.sin(clock.elapsedTime * 20) * 0.5 + 0.5;
+                    currentVrm.expressionManager.setValue('aa', s);
+                } else {
+                    currentVrm.expressionManager.setValue('aa', 0);
+                }
+            }
+
+            if (mixer) mixer.update(delta);
+            if (currentVrm) currentVrm.update(delta);
+            renderer.render(scene, camera);
+        }
+
+        // --- Load & Helper ---
         function updateBoundaries() {
             const vFOV = THREE.MathUtils.degToRad(camera.fov); 
             const dist = camera.position.z; 
             const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
             const visibleWidth = visibleHeight * camera.aspect;
-
             const cameraY = camera.position.y;
-            
             screenBounds.minY = cameraY - visibleHeight / 2;
             screenBounds.maxY = cameraY + visibleHeight / 2;
             screenBounds.minX = -visibleWidth / 2;
@@ -207,25 +514,15 @@
                 const vrmGltf = await loader.loadAsync(MODEL_URL);
                 const vrm = vrmGltf.userData.vrm;
                 currentVrm = vrm;
-                
                 VRMUtils.rotateVRM0(vrm);
                 vrm.scene.rotation.y = 0; 
-
                 updateBoundaries();
-
-                // 初始位置：左下角
-                vrm.scene.position.set(
-                    screenBounds.minX + CHAR_HALF_WIDTH + 0.2, 
-                    screenBounds.minY + 0.1, 
-                    0.0
-                ); 
-                
+                vrm.scene.position.set(0, -1.0, 0);
                 targetPosition.copy(vrm.scene.position);
-
+                vrm.scene.visible = false;
                 scene.add(vrm.scene);
 
                 mixer = new THREE.AnimationMixer(currentVrm.scene);
-
                 const vrmaGltf1 = await loader.loadAsync(ANIMATION_URL);
                 const clip1 = createVRMAnimationClip(vrmaGltf1.userData.vrmAnimations[0], currentVrm);
                 idleAction = mixer.clipAction(clip1);
@@ -241,57 +538,39 @@
                     if (e.action === specialAction) {
                         isPerformingSpecial = false;
                         velocity.set(0, 0, 0);
-
                         idleAction.reset();
                         idleAction.play();
                         specialAction.crossFadeTo(idleAction, 0.5);
                     }
                 });
 
-                // 顯示 Hitbox
-                hitbox.style.display = 'block';
-
+                hitbox.style.display = 'none';
                 loadingOverlay.style.opacity = 0;
                 setTimeout(() => loadingOverlay.style.display = 'none', 500);
-
-            } catch (e) {
-                console.error(e);
-            }
+            } catch (e) { console.error(e); }
         }
 
         function playSpecialAnimation() {
-            if (!specialAction || !idleAction || isPerformingSpecial) return;
-
+            if (!specialAction || !idleAction || isPerformingSpecial || !isCharacterVisible) return;
             isPerformingSpecial = true;
-            
             specialAction.reset();
             specialAction.play();
             idleAction.crossFadeTo(specialAction, 0.3);
         }
 
         function updateHitbox() {
-            if (!currentVrm) return;
-
-            // 取得角色中心位置
+            if (!currentVrm || !isCharacterVisible) return;
             const targetPos = currentVrm.scene.position.clone();
             targetPos.y += 0.75; 
-
-            // 將 3D 座標轉為 2D 螢幕座標
             const vector = targetPos.project(camera);
-
             const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
             const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
-
-            const boxWidth = 140;
-            const boxHeight = 240; 
-
+            const boxWidth = 140; const boxHeight = 240; 
             hitbox.style.left = `${x - boxWidth / 2}px`;
             hitbox.style.top = `${y - boxHeight / 2}px`;
             hitbox.style.width = `${boxWidth}px`;
             hitbox.style.height = `${boxHeight}px`;
         }
-
-        // --- Interaction Logic ---
 
         function updateMouse(clientX, clientY) {
             mouse.x = (clientX / window.innerWidth) * 2 - 1;
@@ -300,28 +579,12 @@
 
         function onHitboxMouseDown(e) {
             e.preventDefault();
-            
+            // 在繪圖模式下，不允許角色拖曳，優先繪圖
+            if (drawingMode !== 'none') return;
+
             if (isPerformingSpecial) return;
-
-            // 中鍵 (1)
-            if (e.button === 1) {
-                playSpecialAnimation();
-                return;
-            }
-
-            // 左鍵 (0)
             if (e.button === 0) {
                 updateMouse(e.clientX, e.clientY);
-                startDrag();
-            }
-        }
-
-        function onHitboxTouchStart(e) {
-            if (e.touches.length > 0) {
-                e.preventDefault();
-                if (isPerformingSpecial) return;
-                
-                updateMouse(e.touches[0].clientX, e.touches[0].clientY);
                 startDrag();
             }
         }
@@ -330,52 +593,28 @@
             if (!currentVrm) return;
             isDragging = true;
             hitbox.style.cursor = 'grabbing';
-            
-            // 關鍵修正：拖曳時禁用 iframe 的滑鼠事件，防止滑鼠滑太快進入 iframe 導致 mouseup 遺失
             iframeFrame.style.pointerEvents = 'none';
-
-            // 1. 設定拖曳平面 (Z=0)
             dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), currentVrm.scene.position);
-            
-            // 2. 計算 Offset (修正「點擊即瞬移」問題)
-            // 找出滑鼠目前在平面上的落點
             raycaster.setFromCamera(mouse, camera);
             const intersectPoint = new THREE.Vector3();
             raycaster.ray.intersectPlane(dragPlane, intersectPoint);
-            
-            if (intersectPoint) {
-                // Offset = 角色原點 - 滑鼠落點
-                // 這樣之後移動時，角色位置 = 新滑鼠落點 + Offset，保持相對距離不變
-                dragOffset.subVectors(currentVrm.scene.position, intersectPoint);
-            }
-            
+            if (intersectPoint) dragOffset.subVectors(currentVrm.scene.position, intersectPoint);
             targetPosition.copy(currentVrm.scene.position);
         }
 
         function onGlobalMouseMove(e) {
+            // 如果是拖曳角色模式
             if (isDragging) {
                 e.preventDefault();
                 updateMouse(e.clientX, e.clientY);
-                moveDrag();
-            }
-        }
-
-        function onGlobalTouchMove(e) {
-            if (isDragging && e.touches.length > 0) {
-                updateMouse(e.touches[0].clientX, e.touches[0].clientY);
-                moveDrag();
-            }
-        }
-
-        function moveDrag() {
-            raycaster.setFromCamera(mouse, camera);
-            const intersectPoint = new THREE.Vector3();
-            raycaster.ray.intersectPlane(dragPlane, intersectPoint);
-            
-            if (intersectPoint) {
-                // 修正：目標位置 = 滑鼠落點 + 之前的 Offset
-                targetPosition.addVectors(intersectPoint, dragOffset);
-                clampPosition(targetPosition);
+                raycaster.setFromCamera(mouse, camera);
+                const intersectPoint = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, intersectPoint);
+                if (intersectPoint) {
+                    targetPosition.addVectors(intersectPoint, dragOffset);
+                    targetPosition.x = Math.max(screenBounds.minX + 0.4, Math.min(screenBounds.maxX - 0.4, targetPosition.x));
+                    targetPosition.y = Math.max(screenBounds.minY, Math.min(screenBounds.maxY - 1.6, targetPosition.y));
+                }
             }
         }
 
@@ -383,55 +622,20 @@
             if (isDragging) {
                 isDragging = false;
                 hitbox.style.cursor = 'grab';
-                // 恢復 iframe 互動
-                iframeFrame.style.pointerEvents = 'auto';
-            }
-        }
-
-        function clampPosition(pos) {
-            pos.x = Math.max(screenBounds.minX + CHAR_HALF_WIDTH, Math.min(screenBounds.maxX - CHAR_HALF_WIDTH, pos.x));
-            pos.y = Math.max(screenBounds.minY, Math.min(screenBounds.maxY - CHAR_HEIGHT, pos.y));
-        }
-
-        function animate() {
-            requestAnimationFrame(animate);
-            const delta = Math.min(clock.getDelta(), 0.05);
-            
-            if (currentVrm) {
-                const pos = currentVrm.scene.position;
-
-                if (!isPerformingSpecial) {
-                    if (isDragging) {
-                        const displacement = new THREE.Vector3().subVectors(targetPosition, pos);
-                        const force = displacement.multiplyScalar(DRAG_STIFFNESS);
-                        velocity.add(force.multiplyScalar(delta));
-                        velocity.multiplyScalar(DRAG_FRICTION); 
-                        pos.add(velocity.clone().multiplyScalar(delta));
-                    } else {
-                        velocity.set(0, 0, 0); 
-                    }
-                    clampPosition(pos);
+                // 只有在滑鼠模式下才恢復 iframe 點擊
+                if (drawingMode === 'none') {
+                    iframeFrame.style.pointerEvents = 'auto';
                 }
-
-                currentVrm.scene.rotation.y = 0; 
-
-                updateHitbox();
             }
-
-            if (mixer) mixer.update(delta);
-            if (currentVrm) currentVrm.update(delta);
-            
-            renderer.render(scene, camera);
         }
 
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
+            resizeDrawingCanvas();
             updateBoundaries();
-            
             if (currentVrm && !isPerformingSpecial && !isDragging) {
-                clampPosition(currentVrm.scene.position);
                 targetPosition.copy(currentVrm.scene.position);
             }
         }
