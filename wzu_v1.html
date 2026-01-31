@@ -58,8 +58,8 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 20; /* 在角色判定框之上 */
-            pointer-events: none; /* 預設不攔截 */
+            z-index: 20;
+            pointer-events: none;
             touch-action: none;
         }
 
@@ -110,10 +110,14 @@
         }
         button:hover { background: #1d4ed8; transform: translateY(-1px); }
         
-        /* 狀態樣式 */
         #btn-toggle-char.active { background: #dc2626; }
         #btn-dance { background: #10b981; display: none; }
         #btn-dance:hover { background: #059669; }
+        
+        /* 交談按鈕 */
+        #btn-chat { background: #8b5cf6; display: none; } /* 紫色 */
+        #btn-chat:hover { background: #7c3aed; }
+        #btn-chat.active { background: #dc2626; } /* 關閉時變紅 */
 
         /* 工具按鈕樣式 */
         .tool-btn {
@@ -129,12 +133,61 @@
             border-color: #2563eb;
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
         }
-        
-        /* SVG Icon 樣式 */
-        .icon-svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
+        .icon-svg { width: 18px; height: 18px; fill: currentColor; }
+
+        /* 6. 交談輸入介面 (Chat UI) */
+        #chat-ui {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            display: none; /* 預設隱藏 */
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px;
+            border-radius: 30px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            pointer-events: auto;
+            align-items: center;
+            gap: 10px;
+            width: 300px;
+        }
+        #chat-input {
+            flex: 1;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            padding: 8px 15px;
+            font-size: 14px;
+            outline: none;
+        }
+        #chat-submit {
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            flex: none;
+        }
+        #chat-submit:hover { background: #7c3aed; }
+
+        /* 7. 對話氣泡 (Speech Bubble) */
+        #chat-bubble {
+            position: absolute;
+            z-index: 90;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 16px;
+            border-radius: 12px;
+            border-bottom-left-radius: 0; /* 對話框尾巴效果 */
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-size: 14px;
+            color: #1f2937;
+            max-width: 200px;
+            display: none;
+            pointer-events: none; /* 讓點擊穿透 */
+            transform: translate(20px, -100%); /* 位置微調 */
+            line-height: 1.4;
         }
 
         /* Loading */
@@ -181,11 +234,21 @@
     <!-- 繪圖層 -->
     <canvas id="drawing-canvas"></canvas>
 
+    <!-- 對話氣泡 (顯示在腰部) -->
+    <div id="chat-bubble"></div>
+
+    <!-- 交談輸入介面 -->
+    <div id="chat-ui">
+        <input type="text" id="chat-input" placeholder="輸入文字與我交談..." autocomplete="off">
+        <button id="chat-submit">送出</button>
+    </div>
+
     <!-- 簡報控制台 -->
     <div id="control-panel">
         <h3>簡報控制台</h3>
         <button id="btn-toggle-char">顯示虛擬人物</button>
         <button id="btn-dance">跳舞</button>
+        <button id="btn-chat">💬 交談</button>
         
         <div class="btn-group" style="margin-top: 5px; border-top: 1px solid #eee; padding-top: 10px;">
             <button id="btn-tool-mouse" class="tool-btn active" title="操作網頁/拖曳角色">🖱️</button>
@@ -229,6 +292,7 @@
         let specialAction = null;
         let screenBounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
         let isCharacterVisible = false;
+        let isChatting = false; // 交談模式狀態
         
         // Interaction
         const mouse = new THREE.Vector2();
@@ -256,6 +320,11 @@
         const iframeFrame = document.getElementById('webpage-frame'); 
         const btnToggle = document.getElementById('btn-toggle-char');
         const btnDance = document.getElementById('btn-dance');
+        const btnChat = document.getElementById('btn-chat');
+        const chatUI = document.getElementById('chat-ui');
+        const chatInput = document.getElementById('chat-input');
+        const chatSubmit = document.getElementById('chat-submit');
+        const chatBubble = document.getElementById('chat-bubble');
         
         const drawingCanvas = document.getElementById('drawing-canvas');
         const btnToolMouse = document.getElementById('btn-tool-mouse');
@@ -266,6 +335,12 @@
         function init() {
             btnToggle.addEventListener('click', toggleCharacter);
             btnDance.addEventListener('click', playSpecialAnimation);
+            btnChat.addEventListener('click', toggleChatMode);
+            chatSubmit.addEventListener('click', sendChatMessage);
+            // 綁定 Enter 鍵送出
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') sendChatMessage();
+            });
 
             // Tool Buttons
             btnToolMouse.addEventListener('click', () => setDrawingMode('none'));
@@ -277,7 +352,7 @@
             ctx = drawingCanvas.getContext('2d');
             resizeDrawingCanvas();
             
-            // Drawing Events (Left Click now)
+            // Drawing Events (Left Click)
             drawingCanvas.addEventListener('mousedown', onCanvasMouseDown);
             window.addEventListener('mousemove', onCanvasMouseMove);
             window.addEventListener('mouseup', onCanvasMouseUp);
@@ -310,6 +385,98 @@
             animate();
         }
 
+        // --- Chat Logic ---
+        function toggleChatMode() {
+            if (!isCharacterVisible) return; // 沒顯示角色不能開聊
+
+            isChatting = !isChatting;
+            if (isChatting) {
+                // 開啟
+                chatUI.style.display = 'flex';
+                btnChat.textContent = '❌ 結束交談';
+                btnChat.classList.add('active');
+                setTimeout(() => chatInput.focus(), 100);
+            } else {
+                // 關閉
+                closeChat();
+            }
+        }
+
+        function closeChat() {
+            isChatting = false;
+            chatUI.style.display = 'none';
+            chatBubble.style.display = 'none'; // 隱藏對話氣泡
+            btnChat.textContent = '💬 交談';
+            btnChat.classList.remove('active');
+            stopSpeaking();
+        }
+
+        async function sendChatMessage() {
+            const text = chatInput.value.trim();
+            if (!text) return;
+
+            chatInput.value = ''; // 清空輸入框
+            chatBubble.style.display = 'block';
+            chatBubble.textContent = "🤔 思考中...";
+            
+            // 呼叫 AI (啟用 Google Search)
+            const prompt = `
+                使用者對你說：${text}
+                請優先搜尋網路最新資訊來回答，並用繁體中文回應，字數在 30 字以內。
+                你是文藻外語大學的虛擬導覽員，個性活潑。
+                請直接輸出回應內容。
+            `;
+            
+            const responseText = await callGemini(prompt);
+            
+            if (responseText && isChatting && isCharacterVisible) {
+                chatBubble.textContent = responseText;
+                speak(responseText);
+            } else {
+                chatBubble.textContent = "...";
+            }
+        }
+
+        // 修改：加入 Google Search Tools
+        async function callGemini(promptText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+            
+            // 啟用 Google Search Tool
+            const payload = { 
+                contents: [{ parts: [{ text: promptText }] }],
+                tools: [{ "google_search": {} }] 
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text;
+            } catch (error) {
+                console.error("AI Error:", error);
+                return "抱歉，我現在連線有點問題。";
+            }
+        }
+
+        // 更新對話框位置 (跟隨腰部)
+        function updateChatBubblePosition() {
+            if (!currentVrm || !isCharacterVisible || chatBubble.style.display === 'none') return;
+
+            const waistPos = currentVrm.scene.position.clone();
+            waistPos.y += 0.85; // 大約在腰部高度 (VRM 原點在腳底)
+
+            // 轉 3D 座標為 2D 螢幕座標
+            const vector = waistPos.project(camera);
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+
+            chatBubble.style.left = `${x}px`;
+            chatBubble.style.top = `${y}px`;
+        }
+
         // --- Drawing Logic ---
         function resizeDrawingCanvas() {
             drawingCanvas.width = window.innerWidth;
@@ -339,7 +506,6 @@
         }
 
         function onCanvasMouseDown(e) {
-            // 左鍵 (button 0) 且在繪圖模式
             if (e.button === 0 && drawingMode !== 'none') {
                 isDrawing = true;
                 ctx.beginPath();
@@ -347,7 +513,6 @@
                 ctx.lineWidth = drawingMode === 'pen' ? 3 : 20;
                 ctx.lineCap = 'round';
                 ctx.strokeStyle = 'red';
-                // 橡皮擦模式使用 destination-out
                 ctx.globalCompositeOperation = drawingMode === 'eraser' ? 'destination-out' : 'source-over';
             }
         }
@@ -365,37 +530,17 @@
             }
         }
 
-        // --- AI Generation Logic ---
+        // --- AI Generation Logic (Intro) ---
         async function generateAndSpeak() {
             const prompt = `
                 請用繁體中文介紹文藻外語大學，字數嚴格限制在50字以內。
-                重要要求：
-                1. 每次回答請採用不同的切入點或語氣（例如：有時強調國際化、有時強調外語專業、有時強調校園熱情），讓每次生成的內容都有新鮮感。
-                2. 只能包含中文和英文，絕對不要包含任何表情符號、Markdown符號、Hashtag或非語言的標點符號。
-                3. 直接輸出講稿內容，不要有開頭問候語。
+                請優先搜尋網路最新資訊來作為介紹的切入點（例如最新活動或新聞），讓每次內容都不同。
+                只能包含中文和英文，絕對不要包含任何表情符號。
+                直接輸出講稿內容。
             `;
-
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-            const payload = { contents: [{ parts: [{ text: prompt }] }] };
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                
-                if (text && isCharacterVisible) {
-                    console.log("AI Generated Intro:", text);
-                    speak(text);
-                }
-            } catch (error) {
-                console.error("AI Generation Error:", error);
-                if (isCharacterVisible) {
-                    speak("文藻外語大學是台灣唯一的外語大學，致力於培養具有國際觀的專業外語人才。");
-                }
+            const text = await callGemini(prompt);
+            if (text && isCharacterVisible) {
+                speak(text);
             }
         }
 
@@ -440,6 +585,7 @@
                 btnToggle.textContent = '隱藏虛擬人物';
                 btnToggle.classList.add('active');
                 btnDance.style.display = 'block';
+                btnChat.style.display = 'block'; // 顯示交談按鈕
                 
                 generateAndSpeak();
             } else {
@@ -451,7 +597,10 @@
                 btnToggle.textContent = '顯示虛擬人物';
                 btnToggle.classList.remove('active');
                 btnDance.style.display = 'none';
+                btnChat.style.display = 'none'; // 隱藏交談按鈕
                 
+                // 關閉聊天相關
+                closeChat();
                 stopSpeaking();
             }
         }
@@ -478,6 +627,9 @@
                 }
                 currentVrm.scene.rotation.y = 0; 
                 updateHitbox();
+                
+                // 更新對話氣泡位置
+                updateChatBubblePosition();
 
                 if (isSpeaking) {
                     const s = Math.sin(clock.elapsedTime * 20) * 0.5 + 0.5;
@@ -579,9 +731,7 @@
 
         function onHitboxMouseDown(e) {
             e.preventDefault();
-            // 在繪圖模式下，不允許角色拖曳，優先繪圖
             if (drawingMode !== 'none') return;
-
             if (isPerformingSpecial) return;
             if (e.button === 0) {
                 updateMouse(e.clientX, e.clientY);
@@ -603,7 +753,6 @@
         }
 
         function onGlobalMouseMove(e) {
-            // 如果是拖曳角色模式
             if (isDragging) {
                 e.preventDefault();
                 updateMouse(e.clientX, e.clientY);
@@ -622,7 +771,6 @@
             if (isDragging) {
                 isDragging = false;
                 hitbox.style.cursor = 'grab';
-                // 只有在滑鼠模式下才恢復 iframe 點擊
                 if (drawingMode === 'none') {
                     iframeFrame.style.pointerEvents = 'auto';
                 }
