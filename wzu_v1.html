@@ -33,21 +33,8 @@
             height: 100vh;
             display: block;
             z-index: 1;
+            /* 預設穿透，由 JS 動態控制 */
             pointer-events: none;
-        }
-
-        /* 3. 互動判定層 */
-        #character-hitbox {
-            position: absolute;
-            z-index: 10; 
-            cursor: grab;
-            background: rgba(255, 0, 0, 0.0);
-            border-radius: 20px;
-            display: none; 
-            touch-action: none; 
-        }
-        #character-hitbox:active {
-            cursor: grabbing;
         }
 
         /* Loading */
@@ -92,7 +79,6 @@
 
     <iframe id="webpage-frame" src="https://a001.wzu.edu.tw/"></iframe>
 
-    <div id="character-hitbox"></div>
     <div id="loading-overlay"><div class="spinner"></div></div>
     <div id="canvas-container"></div>
 
@@ -108,7 +94,6 @@
         const SPECIAL_ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Breakdance_Freeze_Var_3.vrma';
         
         // Physics Params
-        const FRICTION = 0.90;
         const DRAG_STIFFNESS = 300.0;
         const DRAG_FRICTION = 0.85;
 
@@ -127,8 +112,9 @@
         const mouse = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
         let isDragging = false;
-        let isPerformingSpecial = false; // 新增：是否正在表演特技
-        let savedPosition = new THREE.Vector3(); // 新增：儲存表演前的位置
+        let isHovering = false; // 是否游標在角色上
+        let isPerformingSpecial = false; 
+        let savedPosition = new THREE.Vector3(); 
         
         let dragPlane = new THREE.Plane();
         let targetPosition = new THREE.Vector3();
@@ -136,16 +122,16 @@
 
         // DOM
         const container = document.getElementById('canvas-container');
-        const hitbox = document.getElementById('character-hitbox');
         const loadingOverlay = document.getElementById('loading-overlay');
 
         function init() {
             // 1. Scene
             scene = new THREE.Scene();
 
-            // 2. Camera
+            // 2. Camera (固定位置)
             camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50.0);
             camera.position.set(0.0, 1.0, 6.0); 
+            // 注意：這裡假設相機沒有旋轉 (lookAt 預設向 -Z)
 
             // 3. Renderer
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
@@ -161,39 +147,42 @@
             dirLight.position.set(5, 10, 5);
             scene.add(dirLight);
 
-            updateBoundaries();
-
             // 5. Events
-            hitbox.addEventListener('mousedown', onHitboxMouseDown);
-            hitbox.addEventListener('touchstart', onHitboxTouchStart, {passive: false});
-
+            // 使用 window 層級監聽，確保隨時能捕捉滑鼠移動
             window.addEventListener('mousemove', onGlobalMouseMove);
+            window.addEventListener('mousedown', onGlobalMouseDown);
             window.addEventListener('mouseup', onGlobalMouseUp);
+            
+            // Touch Events
+            window.addEventListener('touchstart', onGlobalTouchStart, {passive: false});
             window.addEventListener('touchmove', onGlobalTouchMove, {passive: false});
             window.addEventListener('touchend', onGlobalMouseUp);
+
             window.addEventListener('resize', onWindowResize);
 
             clock = new THREE.Clock();
+
+            // 初始計算邊界
+            updateBoundaries();
 
             loadAssets();
             animate();
         }
 
+        // 使用三角函數計算邊界，比 unproject 更穩定
         function updateBoundaries() {
-            const zDepth = 0; 
-            const bl = new THREE.Vector3(-1, -1, 0.5).unproject(camera);
-            const tr = new THREE.Vector3(1, 1, 0.5).unproject(camera);
-            const dirBL = bl.sub(camera.position).normalize();
-            const dirTR = tr.sub(camera.position).normalize();
-            const tBL = (zDepth - camera.position.z) / dirBL.z;
-            const tTR = (zDepth - camera.position.z) / dirTR.z;
-            const worldBL = camera.position.clone().add(dirBL.multiplyScalar(tBL));
-            const worldTR = camera.position.clone().add(dirTR.multiplyScalar(tTR));
+            const vFOV = THREE.MathUtils.degToRad(camera.fov); // 30度轉弧度
+            const dist = camera.position.z; // 6.0
+            const visibleHeight = 2 * Math.tan(vFOV / 2) * dist;
+            const visibleWidth = visibleHeight * camera.aspect;
+
+            // Camera Y is 1.0
+            const cameraY = camera.position.y;
             
-            screenBounds.minX = worldBL.x;
-            screenBounds.maxX = worldTR.x;
-            screenBounds.minY = worldBL.y;
-            screenBounds.maxY = worldTR.y;
+            screenBounds.minY = cameraY - visibleHeight / 2;
+            screenBounds.maxY = cameraY + visibleHeight / 2;
+            screenBounds.minX = -visibleWidth / 2; // Camera X is 0
+            screenBounds.maxX = visibleWidth / 2;
         }
 
         async function loadAssets() {
@@ -202,13 +191,15 @@
             loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
 
             try {
-                // 1. 載入模型
                 const vrmGltf = await loader.loadAsync(MODEL_URL);
                 const vrm = vrmGltf.userData.vrm;
                 currentVrm = vrm;
                 
                 VRMUtils.rotateVRM0(vrm);
                 vrm.scene.rotation.y = 0; 
+
+                // 強制重新計算邊界，確保正確
+                updateBoundaries();
 
                 // 初始位置：左下角
                 vrm.scene.position.set(
@@ -217,44 +208,37 @@
                     0.0
                 ); 
                 
+                // 立即更新目標位置，避免一開始就飄移
+                targetPosition.copy(vrm.scene.position);
+
                 scene.add(vrm.scene);
 
-                // 建立 Mixer
                 mixer = new THREE.AnimationMixer(currentVrm.scene);
 
-                // 2. 載入第一動作 (待機/Loop)
                 const vrmaGltf1 = await loader.loadAsync(ANIMATION_URL);
                 const clip1 = createVRMAnimationClip(vrmaGltf1.userData.vrmAnimations[0], currentVrm);
                 idleAction = mixer.clipAction(clip1);
                 idleAction.play(); 
 
-                // 3. 載入第二動作 (特殊/Once)
                 const vrmaGltf2 = await loader.loadAsync(SPECIAL_ANIMATION_URL);
                 const clip2 = createVRMAnimationClip(vrmaGltf2.userData.vrmAnimations[0], currentVrm);
                 specialAction = mixer.clipAction(clip2);
                 specialAction.setLoop(THREE.LoopOnce); 
                 specialAction.clampWhenFinished = false; 
 
-                // 4. 設定動作切換監聽器
                 mixer.addEventListener('finished', (e) => {
                     if (e.action === specialAction) {
-                        // 特殊動作結束
                         isPerformingSpecial = false;
-
-                        // 瞬間回到原本位置
                         currentVrm.scene.position.copy(savedPosition);
-                        // 確保目標位置也同步，避免拖曳物理計算產生跳動
                         targetPosition.copy(savedPosition);
                         velocity.set(0, 0, 0);
 
-                        // 切換回待機動作
                         idleAction.reset();
                         idleAction.play();
                         specialAction.crossFadeTo(idleAction, 0.5);
                     }
                 });
 
-                hitbox.style.display = 'block';
                 loadingOverlay.style.opacity = 0;
                 setTimeout(() => loadingOverlay.style.display = 'none', 500);
 
@@ -267,89 +251,107 @@
             if (!specialAction || !idleAction || isPerformingSpecial) return;
 
             isPerformingSpecial = true;
-
-            // 1. 記錄當前位置
             savedPosition.copy(currentVrm.scene.position);
-
-            // 2. 瞬移到畫面中間
-            // (0, 0, 0) 大約是畫面中心偏下一點點，適合站立
-            // 如果要貼地，可以用 (0, screenBounds.minY, 0)
             currentVrm.scene.position.set(0, 0, 0); 
             
-            // 3. 播放動作
             specialAction.reset();
             specialAction.play();
             idleAction.crossFadeTo(specialAction, 0.3);
         }
 
-        function updateHitbox() {
-            if (!currentVrm) return;
+        // --- Smart Interaction Logic (Raycasting) ---
+        // 核心邏輯：滑鼠移動時，檢查是否碰到角色。如果碰到，開啟 Canvas 互動；否則關閉。
 
-            const targetPos = currentVrm.scene.position.clone();
-            targetPos.y += 0.75; 
-
-            const vector = targetPos.project(camera);
-            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
-            const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
-
-            const boxWidth = 120; 
-            const boxHeight = 220; 
-
-            hitbox.style.left = `${x - boxWidth / 2}px`;
-            hitbox.style.top = `${y - boxHeight / 2}px`;
-            hitbox.style.width = `${boxWidth}px`;
-            hitbox.style.height = `${boxHeight}px`;
-        }
-
-        // --- Interaction Logic ---
         function updateMouse(clientX, clientY) {
             mouse.x = (clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(clientY / window.innerHeight) * 2 + 1;
         }
 
-        function onHitboxMouseDown(e) {
-            e.preventDefault();
+        function checkIntersection() {
+            if (!currentVrm) return;
+
+            raycaster.setFromCamera(mouse, camera);
             
-            // 表演中不允許其他操作
-            if (isPerformingSpecial) return;
+            // 偵測是否碰到角色的任何部分
+            // 使用 recursive: true 來檢查所有子物件 (Mesh)
+            const intersects = raycaster.intersectObject(currentVrm.scene, true);
 
-            // 中鍵 (Button 1)
-            if (e.button === 1) {
-                playSpecialAnimation();
-                return; 
-            }
-
-            // 左鍵 (Button 0)
-            if (e.button === 0) {
-                updateMouse(e.clientX, e.clientY);
-                startDrag();
+            if (intersects.length > 0) {
+                if (!isHovering) {
+                    isHovering = true;
+                    container.style.pointerEvents = 'auto'; // 開啟互動
+                    container.style.cursor = 'grab';
+                }
+            } else {
+                if (isHovering && !isDragging) {
+                    isHovering = false;
+                    container.style.pointerEvents = 'none'; // 關閉互動 (穿透)
+                    container.style.cursor = 'default';
+                }
             }
         }
 
-        function onHitboxTouchStart(e) {
-            if(e.touches.length > 0) {
+        function onGlobalMouseMove(e) {
+            updateMouse(e.clientX, e.clientY);
+
+            if (isDragging) {
+                // 拖曳中：直接移動
                 e.preventDefault();
+                moveDrag();
+            } else {
+                // 非拖曳中：檢查是否碰到角色
+                checkIntersection();
+            }
+        }
+
+        function onGlobalMouseDown(e) {
+            // 只有當我們處於 Hover 狀態 (pointerEvents: auto) 時，Canvas 才會接收到點擊
+            // 但為了保險，再次檢查 raycast
+            if (!currentVrm || isPerformingSpecial) return;
+
+            updateMouse(e.clientX, e.clientY);
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(currentVrm.scene, true);
+
+            if (intersects.length > 0) {
+                // 確實點到角色了
+                e.preventDefault();
+
+                // 中鍵 (1)
+                if (e.button === 1) {
+                    playSpecialAnimation();
+                    return;
+                }
+
+                // 左鍵 (0)
+                if (e.button === 0) {
+                    startDrag();
+                }
+            }
+        }
+
+        function onGlobalTouchStart(e) {
+            if (e.touches.length > 0) {
                 updateMouse(e.touches[0].clientX, e.touches[0].clientY);
-                startDrag();
+                
+                // Touch 需要主動檢查，因為沒有 hover
+                raycaster.setFromCamera(mouse, camera);
+                const intersects = raycaster.intersectObject(currentVrm.scene, true);
+                
+                if (intersects.length > 0 && !isPerformingSpecial) {
+                    e.preventDefault(); // 防止捲動
+                    container.style.pointerEvents = 'auto'; // 強制開啟
+                    startDrag();
+                }
             }
         }
 
         function startDrag() {
-            if (!currentVrm) return;
             isDragging = true;
-            container.style.pointerEvents = 'auto';
             container.style.cursor = 'grabbing';
-            hitbox.style.cursor = 'grabbing';
+            // 鎖定在 Z=0 平面拖曳
             dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), currentVrm.scene.position);
             targetPosition.copy(currentVrm.scene.position);
-        }
-
-        function onGlobalMouseMove(e) {
-            if (isDragging) {
-                e.preventDefault();
-                updateMouse(e.clientX, e.clientY);
-                moveDrag();
-            }
         }
 
         function onGlobalTouchMove(e) {
@@ -360,23 +362,22 @@
         }
 
         function moveDrag() {
-            if (isDragging) {
-                raycaster.setFromCamera(mouse, camera);
-                const targetPoint = new THREE.Vector3();
-                raycaster.ray.intersectPlane(dragPlane, targetPoint);
-                if (targetPoint) {
-                    targetPosition.copy(targetPoint);
-                    clampPosition(targetPosition);
-                }
+            raycaster.setFromCamera(mouse, camera);
+            const targetPoint = new THREE.Vector3();
+            raycaster.ray.intersectPlane(dragPlane, targetPoint);
+            
+            if (targetPoint) {
+                targetPosition.copy(targetPoint);
+                clampPosition(targetPosition);
             }
         }
 
         function onGlobalMouseUp(e) {
             if (isDragging) {
                 isDragging = false;
-                container.style.pointerEvents = 'none';
-                container.style.cursor = 'default';
-                hitbox.style.cursor = 'grab';
+                container.style.cursor = 'grab';
+                // 放開後，重新檢查一次是否還在角色上，決定是否要關閉 pointerEvents
+                checkIntersection();
             }
         }
 
@@ -392,7 +393,6 @@
             if (currentVrm) {
                 const pos = currentVrm.scene.position;
 
-                // 如果正在表演特技，就不進行物理運算或拖曳
                 if (!isPerformingSpecial) {
                     if (isDragging) {
                         const displacement = new THREE.Vector3().subVectors(targetPosition, pos);
@@ -407,7 +407,6 @@
                 }
 
                 currentVrm.scene.rotation.y = 0; 
-                updateHitbox();
             }
 
             if (mixer) mixer.update(delta);
@@ -421,6 +420,12 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
             updateBoundaries();
+            
+            // 視窗變形時，重新限制角色位置，避免跑出視窗
+            if (currentVrm && !isPerformingSpecial && !isDragging) {
+                clampPosition(currentVrm.scene.position);
+                targetPosition.copy(currentVrm.scene.position);
+            }
         }
 
         init();
