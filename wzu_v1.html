@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VRM Overlay Tool</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        /* 1. 背景層 */
+        #webpage-frame {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            border: none;
+            z-index: 0;
+            background: #fff;
+        }
+
+        /* 2. 角色層 */
+        #canvas-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            display: block;
+            z-index: 1;
+            pointer-events: none;
+        }
+
+        /* 3. 互動判定層 */
+        #character-hitbox {
+            position: absolute;
+            z-index: 10; 
+            cursor: grab;
+            background: rgba(255, 0, 0, 0.0);
+            border-radius: 20px;
+            display: none; 
+            touch-action: none; 
+        }
+        #character-hitbox:active {
+            cursor: grabbing;
+        }
+
+        /* Loading */
+        #loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            transition: opacity 0.5s ease;
+            pointer-events: none;
+        }
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #ccc;
+            border-top: 3px solid #000;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+    
+    <!-- Import Maps -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/",
+                "@pixiv/three-vrm": "https://unpkg.com/@pixiv/three-vrm@3.0.0/lib/three-vrm.module.js",
+                "@pixiv/three-vrm-animation": "https://unpkg.com/@pixiv/three-vrm-animation@3.0.0/lib/three-vrm-animation.module.js"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <iframe id="webpage-frame" src="https://a001.wzu.edu.tw/"></iframe>
+
+    <div id="character-hitbox"></div>
+    <div id="loading-overlay"><div class="spinner"></div></div>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+        import { VRMLoaderPlugin, VRMUtils } from '@pixiv/three-vrm';
+        import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
+
+        // --- Configuration ---
+        const MODEL_URL = 'https://davidkuodcam-crypto.github.io/VTuber/AvatarSample_C.vrm';
+        const ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Taunt_with_Skin.vrma';
+        const SPECIAL_ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Breakdance_Freeze_Var_3.vrma';
+        
+        // Physics Params
+        const FRICTION = 0.90;
+        const DRAG_STIFFNESS = 300.0;
+        const DRAG_FRICTION = 0.85;
+
+        // Character Dimensions
+        const CHAR_HALF_WIDTH = 0.4;
+        const CHAR_HEIGHT = 1.6;
+
+        // --- State ---
+        let scene, camera, renderer, clock, mixer;
+        let currentVrm = null;
+        let idleAction = null;
+        let specialAction = null;
+        let screenBounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
+
+        // Interaction State
+        const mouse = new THREE.Vector2();
+        const raycaster = new THREE.Raycaster();
+        let isDragging = false;
+        let isPerformingSpecial = false; // 新增：是否正在表演特技
+        let savedPosition = new THREE.Vector3(); // 新增：儲存表演前的位置
+        
+        let dragPlane = new THREE.Plane();
+        let targetPosition = new THREE.Vector3();
+        let velocity = new THREE.Vector3(0, 0, 0);
+
+        // DOM
+        const container = document.getElementById('canvas-container');
+        const hitbox = document.getElementById('character-hitbox');
+        const loadingOverlay = document.getElementById('loading-overlay');
+
+        function init() {
+            // 1. Scene
+            scene = new THREE.Scene();
+
+            // 2. Camera
+            camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50.0);
+            camera.position.set(0.0, 1.0, 6.0); 
+
+            // 3. Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.outputColorSpace = THREE.SRGBColorSpace;
+            container.appendChild(renderer.domElement);
+
+            // 4. Lights
+            const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 1.0);
+            scene.add(hemiLight);
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            dirLight.position.set(5, 10, 5);
+            scene.add(dirLight);
+
+            updateBoundaries();
+
+            // 5. Events
+            hitbox.addEventListener('mousedown', onHitboxMouseDown);
+            hitbox.addEventListener('touchstart', onHitboxTouchStart, {passive: false});
+
+            window.addEventListener('mousemove', onGlobalMouseMove);
+            window.addEventListener('mouseup', onGlobalMouseUp);
+            window.addEventListener('touchmove', onGlobalTouchMove, {passive: false});
+            window.addEventListener('touchend', onGlobalMouseUp);
+            window.addEventListener('resize', onWindowResize);
+
+            clock = new THREE.Clock();
+
+            loadAssets();
+            animate();
+        }
+
+        function updateBoundaries() {
+            const zDepth = 0; 
+            const bl = new THREE.Vector3(-1, -1, 0.5).unproject(camera);
+            const tr = new THREE.Vector3(1, 1, 0.5).unproject(camera);
+            const dirBL = bl.sub(camera.position).normalize();
+            const dirTR = tr.sub(camera.position).normalize();
+            const tBL = (zDepth - camera.position.z) / dirBL.z;
+            const tTR = (zDepth - camera.position.z) / dirTR.z;
+            const worldBL = camera.position.clone().add(dirBL.multiplyScalar(tBL));
+            const worldTR = camera.position.clone().add(dirTR.multiplyScalar(tTR));
+            
+            screenBounds.minX = worldBL.x;
+            screenBounds.maxX = worldTR.x;
+            screenBounds.minY = worldBL.y;
+            screenBounds.maxY = worldTR.y;
+        }
+
+        async function loadAssets() {
+            const loader = new GLTFLoader();
+            loader.register((parser) => new VRMLoaderPlugin(parser));
+            loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
+
+            try {
+                // 1. 載入模型
+                const vrmGltf = await loader.loadAsync(MODEL_URL);
+                const vrm = vrmGltf.userData.vrm;
+                currentVrm = vrm;
+                
+                VRMUtils.rotateVRM0(vrm);
+                vrm.scene.rotation.y = 0; 
+
+                // 初始位置：左下角
+                vrm.scene.position.set(
+                    screenBounds.minX + CHAR_HALF_WIDTH + 0.2, 
+                    screenBounds.minY + 0.1, 
+                    0.0
+                ); 
+                
+                scene.add(vrm.scene);
+
+                // 建立 Mixer
+                mixer = new THREE.AnimationMixer(currentVrm.scene);
+
+                // 2. 載入第一動作 (待機/Loop)
+                const vrmaGltf1 = await loader.loadAsync(ANIMATION_URL);
+                const clip1 = createVRMAnimationClip(vrmaGltf1.userData.vrmAnimations[0], currentVrm);
+                idleAction = mixer.clipAction(clip1);
+                idleAction.play(); 
+
+                // 3. 載入第二動作 (特殊/Once)
+                const vrmaGltf2 = await loader.loadAsync(SPECIAL_ANIMATION_URL);
+                const clip2 = createVRMAnimationClip(vrmaGltf2.userData.vrmAnimations[0], currentVrm);
+                specialAction = mixer.clipAction(clip2);
+                specialAction.setLoop(THREE.LoopOnce); 
+                specialAction.clampWhenFinished = false; 
+
+                // 4. 設定動作切換監聽器
+                mixer.addEventListener('finished', (e) => {
+                    if (e.action === specialAction) {
+                        // 特殊動作結束
+                        isPerformingSpecial = false;
+
+                        // 瞬間回到原本位置
+                        currentVrm.scene.position.copy(savedPosition);
+                        // 確保目標位置也同步，避免拖曳物理計算產生跳動
+                        targetPosition.copy(savedPosition);
+                        velocity.set(0, 0, 0);
+
+                        // 切換回待機動作
+                        idleAction.reset();
+                        idleAction.play();
+                        specialAction.crossFadeTo(idleAction, 0.5);
+                    }
+                });
+
+                hitbox.style.display = 'block';
+                loadingOverlay.style.opacity = 0;
+                setTimeout(() => loadingOverlay.style.display = 'none', 500);
+
+            } catch (e) {
+                console.error(e);
+            }
+        }
+
+        function playSpecialAnimation() {
+            if (!specialAction || !idleAction || isPerformingSpecial) return;
+
+            isPerformingSpecial = true;
+
+            // 1. 記錄當前位置
+            savedPosition.copy(currentVrm.scene.position);
+
+            // 2. 瞬移到畫面中間
+            // (0, 0, 0) 大約是畫面中心偏下一點點，適合站立
+            // 如果要貼地，可以用 (0, screenBounds.minY, 0)
+            currentVrm.scene.position.set(0, 0, 0); 
+            
+            // 3. 播放動作
+            specialAction.reset();
+            specialAction.play();
+            idleAction.crossFadeTo(specialAction, 0.3);
+        }
+
+        function updateHitbox() {
+            if (!currentVrm) return;
+
+            const targetPos = currentVrm.scene.position.clone();
+            targetPos.y += 0.75; 
+
+            const vector = targetPos.project(camera);
+            const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+            const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
+
+            const boxWidth = 120; 
+            const boxHeight = 220; 
+
+            hitbox.style.left = `${x - boxWidth / 2}px`;
+            hitbox.style.top = `${y - boxHeight / 2}px`;
+            hitbox.style.width = `${boxWidth}px`;
+            hitbox.style.height = `${boxHeight}px`;
+        }
+
+        // --- Interaction Logic ---
+        function updateMouse(clientX, clientY) {
+            mouse.x = (clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function onHitboxMouseDown(e) {
+            e.preventDefault();
+            
+            // 表演中不允許其他操作
+            if (isPerformingSpecial) return;
+
+            // 中鍵 (Button 1)
+            if (e.button === 1) {
+                playSpecialAnimation();
+                return; 
+            }
+
+            // 左鍵 (Button 0)
+            if (e.button === 0) {
+                updateMouse(e.clientX, e.clientY);
+                startDrag();
+            }
+        }
+
+        function onHitboxTouchStart(e) {
+            if(e.touches.length > 0) {
+                e.preventDefault();
+                updateMouse(e.touches[0].clientX, e.touches[0].clientY);
+                startDrag();
+            }
+        }
+
+        function startDrag() {
+            if (!currentVrm) return;
+            isDragging = true;
+            container.style.pointerEvents = 'auto';
+            container.style.cursor = 'grabbing';
+            hitbox.style.cursor = 'grabbing';
+            dragPlane.setFromNormalAndCoplanarPoint(new THREE.Vector3(0, 0, 1), currentVrm.scene.position);
+            targetPosition.copy(currentVrm.scene.position);
+        }
+
+        function onGlobalMouseMove(e) {
+            if (isDragging) {
+                e.preventDefault();
+                updateMouse(e.clientX, e.clientY);
+                moveDrag();
+            }
+        }
+
+        function onGlobalTouchMove(e) {
+            if (isDragging && e.touches.length > 0) {
+                updateMouse(e.touches[0].clientX, e.touches[0].clientY);
+                moveDrag();
+            }
+        }
+
+        function moveDrag() {
+            if (isDragging) {
+                raycaster.setFromCamera(mouse, camera);
+                const targetPoint = new THREE.Vector3();
+                raycaster.ray.intersectPlane(dragPlane, targetPoint);
+                if (targetPoint) {
+                    targetPosition.copy(targetPoint);
+                    clampPosition(targetPosition);
+                }
+            }
+        }
+
+        function onGlobalMouseUp(e) {
+            if (isDragging) {
+                isDragging = false;
+                container.style.pointerEvents = 'none';
+                container.style.cursor = 'default';
+                hitbox.style.cursor = 'grab';
+            }
+        }
+
+        function clampPosition(pos) {
+            pos.x = Math.max(screenBounds.minX + CHAR_HALF_WIDTH, Math.min(screenBounds.maxX - CHAR_HALF_WIDTH, pos.x));
+            pos.y = Math.max(screenBounds.minY, Math.min(screenBounds.maxY - CHAR_HEIGHT, pos.y));
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.05);
+            
+            if (currentVrm) {
+                const pos = currentVrm.scene.position;
+
+                // 如果正在表演特技，就不進行物理運算或拖曳
+                if (!isPerformingSpecial) {
+                    if (isDragging) {
+                        const displacement = new THREE.Vector3().subVectors(targetPosition, pos);
+                        const force = displacement.multiplyScalar(DRAG_STIFFNESS);
+                        velocity.add(force.multiplyScalar(delta));
+                        velocity.multiplyScalar(DRAG_FRICTION); 
+                        pos.add(velocity.clone().multiplyScalar(delta));
+                    } else {
+                        velocity.set(0, 0, 0); 
+                    }
+                    clampPosition(pos);
+                }
+
+                currentVrm.scene.rotation.y = 0; 
+                updateHitbox();
+            }
+
+            if (mixer) mixer.update(delta);
+            if (currentVrm) currentVrm.update(delta);
+            
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            updateBoundaries();
+        }
+
+        init();
+    </script>
+</body>
+</html>
