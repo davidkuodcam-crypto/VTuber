@@ -58,8 +58,8 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 20;
-            pointer-events: none;
+            z-index: 20; /* 在角色判定框之上 */
+            pointer-events: none; /* 預設不攔截 */
             touch-action: none;
         }
 
@@ -110,6 +110,7 @@
         }
         button:hover { background: #1d4ed8; transform: translateY(-1px); }
         
+        /* 狀態樣式 */
         #btn-toggle-char.active { background: #dc2626; }
         #btn-dance { background: #10b981; display: none; }
         #btn-dance:hover { background: #059669; }
@@ -133,7 +134,13 @@
             border-color: #2563eb;
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
         }
-        .icon-svg { width: 18px; height: 18px; fill: currentColor; }
+        
+        /* SVG Icon 樣式 */
+        .icon-svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+        }
 
         /* 6. 交談輸入介面 (Chat UI) */
         #chat-ui {
@@ -278,7 +285,7 @@
         import { VRMAnimationLoaderPlugin, createVRMAnimationClip } from '@pixiv/three-vrm-animation';
 
         // --- Config ---
-        const MODEL_URL = 'https://davidkuodcam-crypto.github.io/VTuber/AvatarSample_C.vrm';
+        const MODEL_URL = 'https://davidkuodcam-crypto.github.io/VTuber/AvatarSample_W.vrm';
         const ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Taunt_with_Skin.vrma';
         const SPECIAL_ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Breakdance_Freeze_Var_3.vrma';
         
@@ -540,6 +547,10 @@
             `;
             const text = await callGemini(prompt);
             if (text && isCharacterVisible) {
+                console.log("AI Generated Intro:", text);
+                // 顯示文字氣泡
+                chatBubble.textContent = text;
+                chatBubble.style.display = 'block';
                 speak(text);
             }
         }
@@ -693,6 +704,11 @@
                         idleAction.reset();
                         idleAction.play();
                         specialAction.crossFadeTo(idleAction, 0.5);
+                        
+                        // 跳舞結束，如果氣泡有內容則恢復顯示
+                        if (chatBubble.textContent.trim() !== "") {
+                            chatBubble.style.display = 'block';
+                        }
                     }
                 });
 
@@ -705,6 +721,11 @@
         function playSpecialAnimation() {
             if (!specialAction || !idleAction || isPerformingSpecial || !isCharacterVisible) return;
             isPerformingSpecial = true;
+            
+            // 跳舞時隱藏氣泡並停止說話
+            chatBubble.style.display = 'none';
+            stopSpeaking();
+
             specialAction.reset();
             specialAction.play();
             idleAction.crossFadeTo(specialAction, 0.3);
