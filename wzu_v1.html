@@ -58,8 +58,8 @@
             left: 0;
             width: 100vw;
             height: 100vh;
-            z-index: 20; /* 在角色判定框之上 */
-            pointer-events: none; /* 預設不攔截 */
+            z-index: 20;
+            pointer-events: none;
             touch-action: none;
         }
 
@@ -77,22 +77,45 @@
             flex-direction: column;
             gap: 10px;
             pointer-events: auto;
-            min-width: 160px;
+            min-width: 180px;
         }
         #control-panel h3 {
             margin: 0 0 5px 0;
             font-size: 16px;
             color: #333;
-            text-align: center;
-        }
-
-        /* 按鈕群組 */
-        .btn-group {
             display: flex;
-            gap: 5px;
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
         }
 
+        /* AI 狀態指示燈 */
+        .ai-status {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: #f3f4f6;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-weight: normal;
+        }
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #ef4444; /* 預設紅色 */
+            box-shadow: 0 0 4px rgba(239, 68, 68, 0.5);
+            transition: background-color 0.3s ease;
+        }
+        .status-dot.connected {
+            background-color: #22c55e; /* 綠色 */
+            box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
+        }
+        .status-text { color: #666; font-weight: 500; }
+
+        /* 按鈕通用樣式 */
+        .btn-group { display: flex; gap: 5px; justify-content: center; }
+        
         button {
             background: #2563eb;
             color: white;
@@ -110,115 +133,82 @@
         }
         button:hover { background: #1d4ed8; transform: translateY(-1px); }
         
-        /* 狀態樣式 */
         #btn-toggle-char.active { background: #dc2626; }
         #btn-dance { background: #10b981; display: none; }
         #btn-dance:hover { background: #059669; }
         
-        /* 交談按鈕 */
-        #btn-chat { background: #8b5cf6; display: none; } /* 紫色 */
+        #btn-chat { background: #8b5cf6; display: none; } 
         #btn-chat:hover { background: #7c3aed; }
-        #btn-chat.active { background: #dc2626; } /* 關閉時變紅 */
+        #btn-chat.active { background: #dc2626; }
 
-        /* 工具按鈕樣式 */
+        /* 設定 Key 按鈕 (黃色系) */
+        #btn-config-key { background: #f59e0b; color: white; }
+        #btn-config-key:hover { background: #d97706; }
+
+        /* 工具按鈕 */
         .tool-btn {
-            background: #f3f4f6;
-            color: #4b5563;
-            border: 1px solid #e5e7eb;
-            position: relative;
+            background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; position: relative;
         }
         .tool-btn:hover { background: #e5e7eb; }
         .tool-btn.active {
-            background: #2563eb;
-            color: white;
-            border-color: #2563eb;
+            background: #2563eb; color: white; border-color: #2563eb;
             box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
         }
-        
-        /* SVG Icon 樣式 */
-        .icon-svg {
-            width: 18px;
-            height: 18px;
-            fill: currentColor;
-        }
+        .icon-svg { width: 18px; height: 18px; fill: currentColor; }
 
-        /* 6. 交談輸入介面 (Chat UI) */
+        /* 6. 交談 UI */
         #chat-ui {
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            z-index: 100;
-            display: none; /* 預設隱藏 */
-            background: rgba(255, 255, 255, 0.95);
-            padding: 10px;
-            border-radius: 30px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-            pointer-events: auto;
-            align-items: center;
-            gap: 10px;
-            width: 300px;
+            position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%);
+            z-index: 100; display: none; background: rgba(255, 255, 255, 0.95);
+            padding: 10px; border-radius: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            pointer-events: auto; align-items: center; gap: 10px; width: 300px;
         }
         #chat-input {
-            flex: 1;
-            border: 1px solid #e5e7eb;
-            border-radius: 20px;
-            padding: 8px 15px;
-            font-size: 14px;
-            outline: none;
+            flex: 1; border: 1px solid #e5e7eb; border-radius: 20px; padding: 8px 15px;
+            font-size: 14px; outline: none;
         }
         #chat-submit {
-            background: #8b5cf6;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 20px;
-            cursor: pointer;
-            font-size: 14px;
-            flex: none;
+            background: #8b5cf6; color: white; border: none; padding: 8px 15px;
+            border-radius: 20px; cursor: pointer; font-size: 14px; flex: none;
         }
-        #chat-submit:hover { background: #7c3aed; }
 
-        /* 7. 對話氣泡 (Speech Bubble) */
+        /* 7. 對話氣泡 */
         #chat-bubble {
-            position: absolute;
-            z-index: 90;
-            background: rgba(255, 255, 255, 0.95);
-            padding: 12px 16px;
-            border-radius: 12px;
-            border-bottom-left-radius: 0; /* 對話框尾巴效果 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            font-size: 14px;
-            color: #1f2937;
-            max-width: 200px;
-            display: none;
-            pointer-events: none; /* 讓點擊穿透 */
-            transform: translate(20px, -100%); /* 位置微調 */
-            line-height: 1.4;
+            position: absolute; z-index: 90; background: rgba(255, 255, 255, 0.95);
+            padding: 12px 16px; border-radius: 12px; border-bottom-left-radius: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; color: #1f2937;
+            max-width: 200px; display: none; pointer-events: none;
+            transform: translate(20px, -100%); line-height: 1.4;
         }
+
+        /* 8. API Key Modal */
+        #apikey-modal {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 25px; border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3); z-index: 200;
+            width: 320px; display: none; flex-direction: column; gap: 15px;
+            pointer-events: auto;
+        }
+        #apikey-modal h3 { margin: 0; color: #1f2937; }
+        #apikey-input {
+            padding: 10px; border: 1px solid #d1d5db; border-radius: 8px;
+            font-size: 14px; outline: none; width: 100%; box-sizing: border-box;
+        }
+        #apikey-status { font-size: 13px; min-height: 18px; margin-bottom: 5px; }
+        .modal-actions { display: flex; gap: 10px; }
+        #btn-connect-key { background: #2563eb; }
+        #btn-cancel-key { background: #9ca3af; }
 
         /* Loading */
         #loading-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 50;
-            transition: opacity 0.5s ease;
-            pointer-events: none;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9); display: flex;
+            justify-content: center; align-items: center; z-index: 50;
+            transition: opacity 0.5s ease; pointer-events: none;
         }
         .spinner {
-            width: 30px;
-            height: 30px;
-            border: 3px solid #ccc;
-            border-top: 3px solid #000;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
+            width: 30px; height: 30px; border: 3px solid #ccc;
+            border-top: 3px solid #000; border-radius: 50%; animation: spin 1s linear infinite;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
@@ -241,7 +231,7 @@
     <!-- 繪圖層 -->
     <canvas id="drawing-canvas"></canvas>
 
-    <!-- 對話氣泡 (顯示在腰部) -->
+    <!-- 對話氣泡 -->
     <div id="chat-bubble"></div>
 
     <!-- 交談輸入介面 -->
@@ -250,9 +240,28 @@
         <button id="chat-submit">送出</button>
     </div>
 
+    <!-- API Key 設定視窗 -->
+    <div id="apikey-modal">
+        <h3>設定 API Key</h3>
+        <p style="font-size: 13px; color: #666; margin:0;">請輸入 Gemini API Key 以啟用 AI 功能。</p>
+        <input type="password" id="apikey-input" placeholder="貼上 API Key...">
+        <div id="apikey-status"></div>
+        <div class="modal-actions">
+            <button id="btn-connect-key">連線</button>
+            <button id="btn-cancel-key">取消</button>
+        </div>
+    </div>
+
     <!-- 簡報控制台 -->
     <div id="control-panel">
-        <h3>簡報控制台</h3>
+        <h3>
+            簡報控制台
+            <div class="ai-status" title="Gemini AI 連線狀態">
+                <div id="ai-status-dot" class="status-dot"></div>
+                <span id="ai-status-text" class="status-text">未連線</span>
+            </div>
+        </h3>
+        <button id="btn-config-key">🔑 設定 AI Key</button>
         <button id="btn-toggle-char">顯示虛擬人物</button>
         <button id="btn-dance">跳舞</button>
         <button id="btn-chat">💬 交談</button>
@@ -261,7 +270,6 @@
             <button id="btn-tool-mouse" class="tool-btn active" title="操作網頁/拖曳角色">🖱️</button>
             <button id="btn-tool-pen" class="tool-btn" title="畫筆 (左鍵)">✏️</button>
             <button id="btn-tool-eraser" class="tool-btn" title="橡皮擦 (左鍵)">
-                <!-- SVG Eraser Icon -->
                 <svg class="icon-svg" viewBox="0 0 24 24">
                     <path d="M15.14,3c-0.51,0-1.02,0.2-1.41,0.59L2.59,14.73C1.81,15.51,1.81,16.77,2.59,17.55l5.86,5.86
                         C8.84,23.8,9.35,24,9.86,24s1.02-0.2,1.41-0.59l11.14-11.14c0.78-0.78,0.78-2.05,0-2.83l-5.86-5.86C16.16,3.2,15.65,3,15.14,3z
@@ -289,7 +297,6 @@
         const ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Taunt_with_Skin.vrma';
         const SPECIAL_ANIMATION_URL = 'https://davidkuodcam-crypto.github.io/VTuber/Breakdance_Freeze_Var_3.vrma';
         
-        const GEMINI_API_KEY = 'AIzaSyB2E7V3PMcU8u5MGLDxybLVC0XZiCO7MCY';
         const GEMINI_MODEL = 'gemini-2.5-flash-preview-09-2025';
 
         // --- State ---
@@ -299,8 +306,11 @@
         let specialAction = null;
         let screenBounds = { minX: -5, maxX: 5, minY: -5, maxY: 5 };
         let isCharacterVisible = false;
-        let isChatting = false; // 交談模式狀態
+        let isChatting = false; 
         
+        // API Key State
+        let userApiKey = ""; // 儲存使用者輸入的 Key
+
         // Interaction
         const mouse = new THREE.Vector2();
         const raycaster = new THREE.Raycaster();
@@ -316,18 +326,21 @@
         let synth = window.speechSynthesis;
 
         // Drawing State
-        let drawingMode = 'none'; // 'none', 'pen', 'eraser'
+        let drawingMode = 'none'; 
         let isDrawing = false;
         let ctx;
 
-        // DOM
+        // DOM Elements
         const container = document.getElementById('canvas-container');
         const hitbox = document.getElementById('character-hitbox'); 
         const loadingOverlay = document.getElementById('loading-overlay');
         const iframeFrame = document.getElementById('webpage-frame'); 
+        
         const btnToggle = document.getElementById('btn-toggle-char');
         const btnDance = document.getElementById('btn-dance');
         const btnChat = document.getElementById('btn-chat');
+        const btnConfigKey = document.getElementById('btn-config-key'); // New
+        
         const chatUI = document.getElementById('chat-ui');
         const chatInput = document.getElementById('chat-input');
         const chatSubmit = document.getElementById('chat-submit');
@@ -338,16 +351,29 @@
         const btnToolPen = document.getElementById('btn-tool-pen');
         const btnToolEraser = document.getElementById('btn-tool-eraser');
         const btnToolClear = document.getElementById('btn-tool-clear');
+        
+        // API Modal Elements
+        const apikeyModal = document.getElementById('apikey-modal');
+        const apikeyInput = document.getElementById('apikey-input');
+        const apikeyStatus = document.getElementById('apikey-status');
+        const btnConnectKey = document.getElementById('btn-connect-key');
+        const btnCancelKey = document.getElementById('btn-cancel-key');
+        
+        const aiStatusDot = document.getElementById('ai-status-dot');
+        const aiStatusText = document.getElementById('ai-status-text');
 
         function init() {
+            // UI Events
             btnToggle.addEventListener('click', toggleCharacter);
             btnDance.addEventListener('click', playSpecialAnimation);
             btnChat.addEventListener('click', toggleChatMode);
             chatSubmit.addEventListener('click', sendChatMessage);
-            // 綁定 Enter 鍵送出
-            chatInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') sendChatMessage();
-            });
+            chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(); });
+
+            // API Key UI Events
+            btnConfigKey.addEventListener('click', showApiKeyModal);
+            btnConnectKey.addEventListener('click', handleConnectKey);
+            btnCancelKey.addEventListener('click', hideApiKeyModal);
 
             // Tool Buttons
             btnToolMouse.addEventListener('click', () => setDrawingMode('none'));
@@ -355,15 +381,14 @@
             btnToolEraser.addEventListener('click', () => setDrawingMode('eraser'));
             btnToolClear.addEventListener('click', clearCanvas);
 
-            // Drawing Canvas Init
+            // Drawing Init
             ctx = drawingCanvas.getContext('2d');
             resizeDrawingCanvas();
-            
-            // Drawing Events (Left Click)
             drawingCanvas.addEventListener('mousedown', onCanvasMouseDown);
             window.addEventListener('mousemove', onCanvasMouseMove);
             window.addEventListener('mouseup', onCanvasMouseUp);
 
+            // Three.js Init
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50.0);
             camera.position.set(0.0, 1.0, 6.0); 
@@ -392,19 +417,116 @@
             animate();
         }
 
+        // --- API Key Modal Logic ---
+        function showApiKeyModal() {
+            apikeyModal.style.display = 'flex';
+            apikeyInput.focus();
+            apikeyStatus.textContent = '';
+            apikeyStatus.style.color = '#333';
+        }
+
+        function hideApiKeyModal() {
+            apikeyModal.style.display = 'none';
+        }
+
+        async function handleConnectKey() {
+            const key = apikeyInput.value.trim();
+            if (!key) {
+                apikeyStatus.textContent = "請輸入 API Key";
+                apikeyStatus.style.color = 'red';
+                return;
+            }
+
+            apikeyStatus.textContent = "驗證連線中...";
+            apikeyStatus.style.color = '#2563eb';
+            btnConnectKey.disabled = true;
+
+            const isValid = await testGeminiConnection(key);
+
+            btnConnectKey.disabled = false;
+
+            if (isValid) {
+                userApiKey = key; // 儲存正確的 Key
+                apikeyStatus.textContent = "連線成功！";
+                apikeyStatus.style.color = 'green';
+                
+                // 更新主介面狀態
+                aiStatusDot.classList.add('connected');
+                aiStatusText.textContent = "AI 已連線";
+                
+                // 自動關閉
+                setTimeout(hideApiKeyModal, 1000);
+            } else {
+                apikeyStatus.textContent = "連線失敗，請檢查 Key 是否正確或有效。";
+                apikeyStatus.style.color = 'red';
+                // 失敗時不關閉視窗，讓使用者重試
+            }
+        }
+
+        // --- AI Logic ---
+        async function testGeminiConnection(keyToTest) {
+            // 測試連線
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${keyToTest}`;
+            const payload = { contents: [{ parts: [{ text: "Hello" }] }] };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                if (response.ok) {
+                    return true;
+                } else {
+                    console.error("Auth Failed:", response.status);
+                    return false;
+                }
+            } catch (error) {
+                console.error("Network Error:", error);
+                return false;
+            }
+        }
+
+        async function callGemini(promptText) {
+            if (!userApiKey) {
+                alert("請先設定 API Key 才能使用 AI 功能！");
+                showApiKeyModal();
+                return null;
+            }
+
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${userApiKey}`;
+            
+            const payload = { 
+                contents: [{ parts: [{ text: promptText }] }],
+                tools: [{ "google_search": {} }] 
+            };
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json();
+                return data.candidates?.[0]?.content?.parts?.[0]?.text;
+            } catch (error) {
+                console.error("AI Error:", error);
+                // 如果是 Key 失效，可能會跳錯
+                return "抱歉，連線發生錯誤，請檢查 API Key。";
+            }
+        }
+
         // --- Chat Logic ---
         function toggleChatMode() {
-            if (!isCharacterVisible) return; // 沒顯示角色不能開聊
-
+            if (!isCharacterVisible) return; 
             isChatting = !isChatting;
             if (isChatting) {
-                // 開啟
                 chatUI.style.display = 'flex';
                 btnChat.textContent = '❌ 結束交談';
                 btnChat.classList.add('active');
                 setTimeout(() => chatInput.focus(), 100);
             } else {
-                // 關閉
                 closeChat();
             }
         }
@@ -412,7 +534,7 @@
         function closeChat() {
             isChatting = false;
             chatUI.style.display = 'none';
-            chatBubble.style.display = 'none'; // 隱藏對話氣泡
+            chatBubble.style.display = 'none'; 
             btnChat.textContent = '💬 交談';
             btnChat.classList.remove('active');
             stopSpeaking();
@@ -422,11 +544,10 @@
             const text = chatInput.value.trim();
             if (!text) return;
 
-            chatInput.value = ''; // 清空輸入框
+            chatInput.value = ''; 
             chatBubble.style.display = 'block';
             chatBubble.textContent = "🤔 思考中...";
             
-            // 呼叫 AI (啟用 Google Search)
             const prompt = `
                 使用者對你說：${text}
                 請優先搜尋網路最新資訊來回答，並用繁體中文回應，字數在 30 字以內。
@@ -444,42 +565,14 @@
             }
         }
 
-        // 修改：加入 Google Search Tools
-        async function callGemini(promptText) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
-            
-            // 啟用 Google Search Tool
-            const payload = { 
-                contents: [{ parts: [{ text: promptText }] }],
-                tools: [{ "google_search": {} }] 
-            };
-
-            try {
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await response.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text;
-            } catch (error) {
-                console.error("AI Error:", error);
-                return "抱歉，我現在連線有點問題。";
-            }
-        }
-
-        // 更新對話框位置 (跟隨腰部)
+        // 更新對話框位置
         function updateChatBubblePosition() {
             if (!currentVrm || !isCharacterVisible || chatBubble.style.display === 'none') return;
-
             const waistPos = currentVrm.scene.position.clone();
-            waistPos.y += 0.85; // 大約在腰部高度 (VRM 原點在腳底)
-
-            // 轉 3D 座標為 2D 螢幕座標
+            waistPos.y += 0.85; 
             const vector = waistPos.project(camera);
             const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
             const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight;
-
             chatBubble.style.left = `${x}px`;
             chatBubble.style.top = `${y}px`;
         }
@@ -492,18 +585,15 @@
 
         function setDrawingMode(mode) {
             drawingMode = mode;
-            
-            // UI Update
             btnToolMouse.classList.toggle('active', mode === 'none');
             btnToolPen.classList.toggle('active', mode === 'pen');
             btnToolEraser.classList.toggle('active', mode === 'eraser');
 
-            // Pointer Events Control
             if (mode === 'none') {
-                drawingCanvas.style.pointerEvents = 'none'; // 讓滑鼠穿透到網頁/角色
+                drawingCanvas.style.pointerEvents = 'none'; 
                 container.style.cursor = 'default';
             } else {
-                drawingCanvas.style.pointerEvents = 'auto'; // 攔截滑鼠以繪圖
+                drawingCanvas.style.pointerEvents = 'auto'; 
                 drawingCanvas.style.cursor = mode === 'eraser' ? 'cell' : 'crosshair';
             }
         }
@@ -537,8 +627,15 @@
             }
         }
 
-        // --- AI Generation Logic (Intro) ---
+        // --- AI Intro Logic ---
         async function generateAndSpeak() {
+            // 如果沒有 Key，提示使用者並使用預設講稿
+            if (!userApiKey) {
+                speak("請先點選左下角的設定按鈕，輸入您的 AI Key 才能啟用智慧介紹喔！");
+                showApiKeyModal();
+                return;
+            }
+
             const prompt = `
                 請用繁體中文介紹文藻外語大學，字數嚴格限制在50字以內。
                 請優先搜尋網路最新資訊來作為介紹的切入點（例如最新活動或新聞），讓每次內容都不同。
@@ -548,7 +645,6 @@
             const text = await callGemini(prompt);
             if (text && isCharacterVisible) {
                 console.log("AI Generated Intro:", text);
-                // 顯示文字氣泡
                 chatBubble.textContent = text;
                 chatBubble.style.display = 'block';
                 speak(text);
@@ -566,15 +662,12 @@
         function speak(text) {
             stopSpeaking();
             if (!text) return;
-            
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = 'zh-TW'; 
             utterance.rate = 1.0;
-            
             utterance.onstart = () => { isSpeaking = true; };
             utterance.onend = () => { isSpeaking = false; };
             utterance.onerror = () => { isSpeaking = false; };
-
             synth.speak(utterance);
         }
 
@@ -596,7 +689,7 @@
                 btnToggle.textContent = '隱藏虛擬人物';
                 btnToggle.classList.add('active');
                 btnDance.style.display = 'block';
-                btnChat.style.display = 'block'; // 顯示交談按鈕
+                btnChat.style.display = 'block'; 
                 
                 generateAndSpeak();
             } else {
@@ -608,9 +701,8 @@
                 btnToggle.textContent = '顯示虛擬人物';
                 btnToggle.classList.remove('active');
                 btnDance.style.display = 'none';
-                btnChat.style.display = 'none'; // 隱藏交談按鈕
+                btnChat.style.display = 'none'; 
                 
-                // 關閉聊天相關
                 closeChat();
                 stopSpeaking();
             }
@@ -638,8 +730,6 @@
                 }
                 currentVrm.scene.rotation.y = 0; 
                 updateHitbox();
-                
-                // 更新對話氣泡位置
                 updateChatBubblePosition();
 
                 if (isSpeaking) {
@@ -705,7 +795,6 @@
                         idleAction.play();
                         specialAction.crossFadeTo(idleAction, 0.5);
                         
-                        // 跳舞結束，如果氣泡有內容則恢復顯示
                         if (chatBubble.textContent.trim() !== "") {
                             chatBubble.style.display = 'block';
                         }
@@ -721,11 +810,8 @@
         function playSpecialAnimation() {
             if (!specialAction || !idleAction || isPerformingSpecial || !isCharacterVisible) return;
             isPerformingSpecial = true;
-            
-            // 跳舞時隱藏氣泡並停止說話
             chatBubble.style.display = 'none';
             stopSpeaking();
-
             specialAction.reset();
             specialAction.play();
             idleAction.crossFadeTo(specialAction, 0.3);
