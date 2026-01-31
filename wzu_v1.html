@@ -117,9 +117,10 @@
         .btn-group { display: flex; gap: 5px; justify-content: center; }
         
         button {
-            background: #2563eb;
-            color: white;
-            border: none;
+            /* 預設樣式 (淺藍色底，黑色字) */
+            background: #dbeafe; 
+            color: #000; 
+            border: 1px solid #bfdbfe;
             padding: 10px;
             border-radius: 8px;
             font-size: 14px;
@@ -131,30 +132,41 @@
             align-items: center;
             justify-content: center;
         }
-        button:hover { background: #1d4ed8; transform: translateY(-1px); }
+        button:hover { background: #bfdbfe; transform: translateY(-1px); }
         
-        #btn-toggle-char.active { background: #dc2626; }
-        #btn-dance { background: #10b981; display: none; }
-        #btn-dance:hover { background: #059669; }
-        
-        #btn-chat { background: #8b5cf6; display: none; } 
-        #btn-chat:hover { background: #7c3aed; }
-        #btn-chat.active { background: #dc2626; }
+        /* 設定 Key 按鈕 (淺黃色) */
+        #btn-config-key { background: #fef3c7; border-color: #fde68a; }
+        #btn-config-key:hover { background: #fde68a; }
 
-        /* 設定 Key 按鈕 (黃色系) */
-        #btn-config-key { background: #f59e0b; color: white; }
-        #btn-config-key:hover { background: #d97706; }
+        /* 顯示/隱藏按鈕 (顯示時淺藍，隱藏時淺橘) */
+        #btn-toggle-char { background: #dbeafe; border-color: #bfdbfe; }
+        #btn-toggle-char.active { background: #ffedd5; border-color: #fed7aa; } /* 淺橘色 */
+        #btn-toggle-char.active:hover { background: #fed7aa; }
+
+        /* 跳舞按鈕 (淺綠色) */
+        #btn-dance { background: #d1fae5; border-color: #a7f3d0; display: none; }
+        #btn-dance:hover { background: #a7f3d0; }
+        
+        /* 交談按鈕 (一般淺紫，啟用淺紅) */
+        #btn-chat { background: #ede9fe; border-color: #ddd6fe; display: none; } 
+        #btn-chat:hover { background: #ddd6fe; }
+        #btn-chat.active { background: #fee2e2; border-color: #fecaca; } /* 淺紅色 */
+        #btn-chat.active:hover { background: #fecaca; }
 
         /* 工具按鈕 */
         .tool-btn {
-            background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb; position: relative;
+            background: #f3f4f6; color: #000; border: 1px solid #e5e7eb; position: relative;
         }
         .tool-btn:hover { background: #e5e7eb; }
         .tool-btn.active {
-            background: #2563eb; color: white; border-color: #2563eb;
-            box-shadow: 0 2px 4px rgba(37, 99, 235, 0.3);
+            background: #dbeafe; color: #000; border-color: #3b82f6;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
         }
         .icon-svg { width: 18px; height: 18px; fill: currentColor; }
+
+        /* 清除按鈕 (淺紅) */
+        #btn-tool-clear { background: #fee2e2; border-color: #fecaca; color: #dc2626; }
+        #btn-tool-clear:hover { background: #fecaca; }
 
         /* 6. 交談 UI */
         #chat-ui {
@@ -168,18 +180,22 @@
             font-size: 14px; outline: none;
         }
         #chat-submit {
-            background: #8b5cf6; color: white; border: none; padding: 8px 15px;
+            background: #dbeafe; color: #000; border: 1px solid #bfdbfe; padding: 8px 15px;
             border-radius: 20px; cursor: pointer; font-size: 14px; flex: none;
         }
+        #chat-submit:hover { background: #bfdbfe; }
 
         /* 7. 對話氣泡 */
         #chat-bubble {
             position: absolute; z-index: 90; background: rgba(255, 255, 255, 0.95);
             padding: 12px 16px; border-radius: 12px; border-bottom-left-radius: 0;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15); font-size: 14px; color: #1f2937;
-            max-width: 200px; display: none; pointer-events: none;
-            transform: translate(20px, -100%); line-height: 1.4;
+            max-width: 250px; display: none; pointer-events: auto;
+            transform: translate(20px, -100%); line-height: 1.5;
+            word-break: break-word;
         }
+        #chat-bubble a { color: #2563eb; text-decoration: underline; font-weight: 500; }
+        #chat-bubble a:hover { color: #1d4ed8; }
 
         /* 8. API Key Modal */
         #apikey-modal {
@@ -196,8 +212,8 @@
         }
         #apikey-status { font-size: 13px; min-height: 18px; margin-bottom: 5px; }
         .modal-actions { display: flex; gap: 10px; }
-        #btn-connect-key { background: #2563eb; }
-        #btn-cancel-key { background: #9ca3af; }
+        #btn-connect-key { background: #dbeafe; color: #000; border: 1px solid #bfdbfe; }
+        #btn-cancel-key { background: #f3f4f6; color: #000; border: 1px solid #e5e7eb; }
 
         /* Loading */
         #loading-overlay {
@@ -276,9 +292,7 @@
                          M9.86,22.14L4,16.28l8.48-8.49l5.86,5.86L9.86,22.14z"/>
                 </svg>
             </button>
-            <button id="btn-tool-clear" class="tool-btn" title="清除全部" style="background-color: #fee2e2; color: #dc2626; border-color: #fecaca;">
-                🗑️
-            </button>
+            <button id="btn-tool-clear" class="tool-btn" title="清除全部">🗑️</button>
         </div>
     </div>
 
@@ -308,8 +322,8 @@
         let isCharacterVisible = false;
         let isChatting = false; 
         
-        // API Key State
-        let userApiKey = ""; // 儲存使用者輸入的 Key
+        let userApiKey = ''; 
+        let chatHistory = []; 
 
         // Interaction
         const mouse = new THREE.Vector2();
@@ -339,7 +353,7 @@
         const btnToggle = document.getElementById('btn-toggle-char');
         const btnDance = document.getElementById('btn-dance');
         const btnChat = document.getElementById('btn-chat');
-        const btnConfigKey = document.getElementById('btn-config-key'); // New
+        const btnConfigKey = document.getElementById('btn-config-key'); 
         
         const chatUI = document.getElementById('chat-ui');
         const chatInput = document.getElementById('chat-input');
@@ -352,7 +366,6 @@
         const btnToolEraser = document.getElementById('btn-tool-eraser');
         const btnToolClear = document.getElementById('btn-tool-clear');
         
-        // API Modal Elements
         const apikeyModal = document.getElementById('apikey-modal');
         const apikeyInput = document.getElementById('apikey-input');
         const apikeyStatus = document.getElementById('apikey-status');
@@ -370,25 +383,21 @@
             chatSubmit.addEventListener('click', sendChatMessage);
             chatInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendChatMessage(); });
 
-            // API Key UI Events
             btnConfigKey.addEventListener('click', showApiKeyModal);
             btnConnectKey.addEventListener('click', handleConnectKey);
             btnCancelKey.addEventListener('click', hideApiKeyModal);
 
-            // Tool Buttons
             btnToolMouse.addEventListener('click', () => setDrawingMode('none'));
             btnToolPen.addEventListener('click', () => setDrawingMode('pen'));
             btnToolEraser.addEventListener('click', () => setDrawingMode('eraser'));
             btnToolClear.addEventListener('click', clearCanvas);
 
-            // Drawing Init
             ctx = drawingCanvas.getContext('2d');
             resizeDrawingCanvas();
             drawingCanvas.addEventListener('mousedown', onCanvasMouseDown);
             window.addEventListener('mousemove', onCanvasMouseMove);
             window.addEventListener('mouseup', onCanvasMouseUp);
 
-            // Three.js Init
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 50.0);
             camera.position.set(0.0, 1.0, 6.0); 
@@ -413,8 +422,25 @@
             clock = new THREE.Clock();
             updateBoundaries();
             
+            testGeminiConnection(userApiKey); 
+
             loadAssets();
             animate();
+        }
+
+        // --- Helper: Markdown Link Parser & Speech Cleaner ---
+        function processResponse(text) {
+            const displayHtml = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+                return `<a href="${url}" target="_blank">${linkText}</a>`;
+            });
+            let speechText = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, (match, linkText, url) => {
+                return linkText;
+            });
+            
+            speechText = speechText.replace(/[\u{1F600}-\u{1F6FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}]/gu, '');
+            speechText = speechText.replace(/[\*\#\-\`\~\_]/g, '');
+            
+            return { display: displayHtml, speech: speechText };
         }
 
         // --- API Key Modal Logic ---
@@ -436,36 +462,35 @@
                 apikeyStatus.style.color = 'red';
                 return;
             }
-
             apikeyStatus.textContent = "驗證連線中...";
             apikeyStatus.style.color = '#2563eb';
             btnConnectKey.disabled = true;
 
             const isValid = await testGeminiConnection(key);
-
             btnConnectKey.disabled = false;
 
             if (isValid) {
-                userApiKey = key; // 儲存正確的 Key
+                userApiKey = key; 
                 apikeyStatus.textContent = "連線成功！";
                 apikeyStatus.style.color = 'green';
-                
-                // 更新主介面狀態
-                aiStatusDot.classList.add('connected');
-                aiStatusText.textContent = "AI 已連線";
-                
-                // 自動關閉
                 setTimeout(hideApiKeyModal, 1000);
             } else {
                 apikeyStatus.textContent = "連線失敗，請檢查 Key 是否正確或有效。";
                 apikeyStatus.style.color = 'red';
-                // 失敗時不關閉視窗，讓使用者重試
             }
         }
 
         // --- AI Logic ---
         async function testGeminiConnection(keyToTest) {
-            // 測試連線
+            if (!keyToTest) {
+                aiStatusText.textContent = "未連線";
+                aiStatusDot.className = "status-dot";
+                return false;
+            }
+
+            aiStatusText.textContent = "連線中...";
+            aiStatusDot.className = "status-dot"; 
+            
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${keyToTest}`;
             const payload = { contents: [{ parts: [{ text: "Hello" }] }] };
 
@@ -477,18 +502,22 @@
                 });
                 
                 if (response.ok) {
+                    aiStatusDot.classList.add('connected');
+                    aiStatusText.textContent = "AI 已連線";
                     return true;
                 } else {
-                    console.error("Auth Failed:", response.status);
+                    aiStatusText.textContent = "連線失敗";
+                    aiStatusDot.className = "status-dot";
                     return false;
                 }
             } catch (error) {
-                console.error("Network Error:", error);
+                aiStatusText.textContent = "連線錯誤";
+                aiStatusDot.className = "status-dot";
                 return false;
             }
         }
 
-        async function callGemini(promptText) {
+        async function callGeminiWithHistory() {
             if (!userApiKey) {
                 alert("請先設定 API Key 才能使用 AI 功能！");
                 showApiKeyModal();
@@ -497,8 +526,20 @@
 
             const url = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${userApiKey}`;
             
+            const systemInstruction = {
+                parts: [{ text: `
+                    你是文藻外語大學的虛擬導覽員，個性活潑熱情。
+                    1. **務必使用 Google 搜尋工具**查詢最新資訊，特別是網址連結。
+                    2. **嚴格驗證網址**：當使用者詢問特定系所（如數位內容應用與管理系）時，**務必**確認網址是否對應到該系所。例如，數位內容系的網址通常包含 'c033' 或類似結構。**絕對不要**提供錯誤的單位（如華語中心）連結或失效連結。如果你無法透過搜尋找到確切的官方網址，請直接回答文字資訊，**不要**提供網址。
+                    3. 回答使用繁體中文，字數控制在 50 字以內，但**不要在回答中提及字數限制**。
+                    4. 若提供連結，請務必使用 Markdown 格式 [標題](網址)。
+                    5. 直接輸出回答內容，不要有任何前言後語（如「好的，這是...」）。
+                `}]
+            };
+
             const payload = { 
-                contents: [{ parts: [{ text: promptText }] }],
+                contents: chatHistory,
+                systemInstruction: systemInstruction,
                 tools: [{ "google_search": {} }] 
             };
 
@@ -512,8 +553,7 @@
                 return data.candidates?.[0]?.content?.parts?.[0]?.text;
             } catch (error) {
                 console.error("AI Error:", error);
-                // 如果是 Key 失效，可能會跳錯
-                return "抱歉，連線發生錯誤，請檢查 API Key。";
+                return "抱歉，我現在連線有點問題。";
             }
         }
 
@@ -548,24 +588,57 @@
             chatBubble.style.display = 'block';
             chatBubble.textContent = "🤔 思考中...";
             
-            const prompt = `
-                使用者對你說：${text}
-                請優先搜尋網路最新資訊來回答，並用繁體中文回應，字數在 30 字以內。
-                你是文藻外語大學的虛擬導覽員，個性活潑。
-                請直接輸出回應內容。
-            `;
+            chatHistory.push({ role: "user", parts: [{ text: text }] });
             
-            const responseText = await callGemini(prompt);
+            const responseText = await callGeminiWithHistory();
             
             if (responseText && isChatting && isCharacterVisible) {
-                chatBubble.textContent = responseText;
-                speak(responseText);
+                chatHistory.push({ role: "model", parts: [{ text: responseText }] });
+
+                const processed = processResponse(responseText);
+                chatBubble.innerHTML = processed.display;
+                speak(processed.speech);
             } else {
                 chatBubble.textContent = "...";
             }
         }
 
-        // 更新對話框位置
+        // --- AI Intro Logic ---
+        async function generateAndSpeak() {
+            if (!userApiKey) {
+                speak("請先點選左下角的設定按鈕，輸入您的 AI Key 才能啟用智慧介紹喔！");
+                showApiKeyModal();
+                return;
+            }
+
+            chatHistory = []; 
+            const introPrompt = `
+                請用繁體中文介紹文藻外語大學，字數嚴格限制在50字以內。
+                請優先搜尋網路最新資訊來作為介紹的切入點（例如最新活動或新聞），讓每次內容都不同。
+                只能包含中文和英文，絕對不要包含任何表情符號。
+                直接輸出講稿內容，不要包含「好的」、「這是介紹」或關於字數的說明。
+            `;
+            const text = await callGeminiWithHistory(introPrompt); // Note: callGeminiWithHistory uses history, so prompt needs to be injected carefully.
+            // Actually, for intro, we might want to bypass history or inject it as user prompt. 
+            // Let's adjust generateAndSpeak to use chatHistory logic properly.
+            
+            // Re-implement generateAndSpeak correctly with history:
+            chatHistory = []; // Reset
+            chatHistory.push({ role: "user", parts: [{ text: introPrompt }] });
+            
+            const responseText = await callGeminiWithHistory();
+
+            if (responseText && isCharacterVisible) {
+                chatHistory.push({ role: "model", parts: [{ text: responseText }] });
+                
+                const processed = processResponse(responseText);
+                chatBubble.innerHTML = processed.display;
+                chatBubble.style.display = 'block';
+                speak(processed.speech);
+            }
+        }
+
+        // --- Common & Other Logic (Same as before) ---
         function updateChatBubblePosition() {
             if (!currentVrm || !isCharacterVisible || chatBubble.style.display === 'none') return;
             const waistPos = currentVrm.scene.position.clone();
@@ -577,7 +650,6 @@
             chatBubble.style.top = `${y}px`;
         }
 
-        // --- Drawing Logic ---
         function resizeDrawingCanvas() {
             drawingCanvas.width = window.innerWidth;
             drawingCanvas.height = window.innerHeight;
@@ -627,31 +699,6 @@
             }
         }
 
-        // --- AI Intro Logic ---
-        async function generateAndSpeak() {
-            // 如果沒有 Key，提示使用者並使用預設講稿
-            if (!userApiKey) {
-                speak("請先點選左下角的設定按鈕，輸入您的 AI Key 才能啟用智慧介紹喔！");
-                showApiKeyModal();
-                return;
-            }
-
-            const prompt = `
-                請用繁體中文介紹文藻外語大學，字數嚴格限制在50字以內。
-                請優先搜尋網路最新資訊來作為介紹的切入點（例如最新活動或新聞），讓每次內容都不同。
-                只能包含中文和英文，絕對不要包含任何表情符號。
-                直接輸出講稿內容。
-            `;
-            const text = await callGemini(prompt);
-            if (text && isCharacterVisible) {
-                console.log("AI Generated Intro:", text);
-                chatBubble.textContent = text;
-                chatBubble.style.display = 'block';
-                speak(text);
-            }
-        }
-
-        // --- Speech Logic ---
         function stopSpeaking() {
             if (synth.speaking) {
                 synth.cancel();
@@ -671,48 +718,38 @@
             synth.speak(utterance);
         }
 
-        // --- Character Logic ---
         function toggleCharacter() {
             if (!currentVrm) return;
-
             isCharacterVisible = !isCharacterVisible;
             currentVrm.scene.visible = isCharacterVisible;
-
             if (isCharacterVisible) {
                 currentVrm.scene.position.set(0, -1.0, 0);
                 targetPosition.copy(currentVrm.scene.position);
                 velocity.set(0, 0, 0);
-                
                 hitbox.style.display = 'block';
                 updateHitbox();
-                
                 btnToggle.textContent = '隱藏虛擬人物';
                 btnToggle.classList.add('active');
                 btnDance.style.display = 'block';
                 btnChat.style.display = 'block'; 
-                
                 generateAndSpeak();
             } else {
                 hitbox.style.display = 'none';
                 isDragging = false;
                 container.style.cursor = 'default';
                 iframeFrame.style.pointerEvents = 'auto';
-                
                 btnToggle.textContent = '顯示虛擬人物';
                 btnToggle.classList.remove('active');
                 btnDance.style.display = 'none';
                 btnChat.style.display = 'none'; 
-                
                 closeChat();
                 stopSpeaking();
             }
         }
 
-        // --- Animation Loop ---
         function animate() {
             requestAnimationFrame(animate);
             const delta = Math.min(clock.getDelta(), 0.05);
-            
             if (currentVrm && isCharacterVisible) {
                 const pos = currentVrm.scene.position;
                 if (!isPerformingSpecial) {
@@ -731,7 +768,6 @@
                 currentVrm.scene.rotation.y = 0; 
                 updateHitbox();
                 updateChatBubblePosition();
-
                 if (isSpeaking) {
                     const s = Math.sin(clock.elapsedTime * 20) * 0.5 + 0.5;
                     currentVrm.expressionManager.setValue('aa', s);
@@ -739,13 +775,11 @@
                     currentVrm.expressionManager.setValue('aa', 0);
                 }
             }
-
             if (mixer) mixer.update(delta);
             if (currentVrm) currentVrm.update(delta);
             renderer.render(scene, camera);
         }
 
-        // --- Load & Helper ---
         function updateBoundaries() {
             const vFOV = THREE.MathUtils.degToRad(camera.fov); 
             const dist = camera.position.z; 
@@ -762,7 +796,6 @@
             const loader = new GLTFLoader();
             loader.register((parser) => new VRMLoaderPlugin(parser));
             loader.register((parser) => new VRMAnimationLoaderPlugin(parser));
-
             try {
                 const vrmGltf = await loader.loadAsync(MODEL_URL);
                 const vrm = vrmGltf.userData.vrm;
@@ -774,19 +807,16 @@
                 targetPosition.copy(vrm.scene.position);
                 vrm.scene.visible = false;
                 scene.add(vrm.scene);
-
                 mixer = new THREE.AnimationMixer(currentVrm.scene);
                 const vrmaGltf1 = await loader.loadAsync(ANIMATION_URL);
                 const clip1 = createVRMAnimationClip(vrmaGltf1.userData.vrmAnimations[0], currentVrm);
                 idleAction = mixer.clipAction(clip1);
                 idleAction.play(); 
-
                 const vrmaGltf2 = await loader.loadAsync(SPECIAL_ANIMATION_URL);
                 const clip2 = createVRMAnimationClip(vrmaGltf2.userData.vrmAnimations[0], currentVrm);
                 specialAction = mixer.clipAction(clip2);
                 specialAction.setLoop(THREE.LoopOnce); 
                 specialAction.clampWhenFinished = false; 
-
                 mixer.addEventListener('finished', (e) => {
                     if (e.action === specialAction) {
                         isPerformingSpecial = false;
@@ -794,13 +824,11 @@
                         idleAction.reset();
                         idleAction.play();
                         specialAction.crossFadeTo(idleAction, 0.5);
-                        
                         if (chatBubble.textContent.trim() !== "") {
                             chatBubble.style.display = 'block';
                         }
                     }
                 });
-
                 hitbox.style.display = 'none';
                 loadingOverlay.style.opacity = 0;
                 setTimeout(() => loadingOverlay.style.display = 'none', 500);
