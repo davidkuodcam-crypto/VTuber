@@ -130,7 +130,6 @@
         const raycaster = new THREE.Raycaster();
         let isDragging = false;
         let isPerformingSpecial = false; 
-        let savedPosition = new THREE.Vector3(); 
         
         let dragPlane = new THREE.Plane();
         let targetPosition = new THREE.Vector3();
@@ -241,8 +240,6 @@
                 mixer.addEventListener('finished', (e) => {
                     if (e.action === specialAction) {
                         isPerformingSpecial = false;
-                        currentVrm.scene.position.copy(savedPosition);
-                        targetPosition.copy(savedPosition);
                         velocity.set(0, 0, 0);
 
                         idleAction.reset();
@@ -266,8 +263,6 @@
             if (!specialAction || !idleAction || isPerformingSpecial) return;
 
             isPerformingSpecial = true;
-            savedPosition.copy(currentVrm.scene.position);
-            currentVrm.scene.position.set(0, 0, 0); 
             
             specialAction.reset();
             specialAction.play();
