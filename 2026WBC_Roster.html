@@ -44,32 +44,14 @@
         const X = (props) => <IconBase {...props}><path d="M18 6 6 18" /><path d="m6 6 12 12" /></IconBase>;
         const Star = (props) => <IconBase {...props}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></IconBase>;
         const Activity = (props) => <IconBase {...props}><path d="M22 12h-4l-3 9L9 3l-3 9H2" /></IconBase>;
-        const BarChart2 = (props) => <IconBase {...props}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></IconBase>;
-        const Zap = (props) => <IconBase {...props}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" /></IconBase>;
+        const Info = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" /><line x1="12" y1="8" x2="12.01" y2="8" /></IconBase>;
         const Shield = (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></IconBase>;
         const Target = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></IconBase>;
         const Crosshair = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="22" y1="12" x2="18" y2="12" /><line x1="6" y1="12" x2="2" y2="12" /><line x1="12" y1="6" x2="12" y2="2" /><line x1="12" y1="22" x2="12" y2="18" /></IconBase>;
         const LayoutGrid = (props) => <IconBase {...props}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></IconBase>;
         const Layers = (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></IconBase>;
-
-        // 模擬數據生成器
-        const getMockStats = (position) => {
-            if (position.includes('投手')) {
-                return [
-                { label: 'ERA', value: (Math.random() * 2 + 1.5).toFixed(2) },
-                { label: 'WHIP', value: (Math.random() * 0.4 + 0.9).toFixed(2) },
-                { label: 'K/9', value: (Math.random() * 4 + 7).toFixed(1) },
-                { label: '最快球速', value: `${Math.floor(Math.random() * 8 + 150)}km` }
-                ];
-            } else {
-                return [
-                { label: 'AVG', value: (Math.random() * 0.1 + 0.280).toFixed(3).substring(1) },
-                { label: 'OPS', value: (Math.random() * 0.3 + 0.700).toFixed(3).substring(1) },
-                { label: 'HR', value: Math.floor(Math.random() * 20 + 5) },
-                { label: '盜壘', value: Math.floor(Math.random() * 15 + 2) }
-                ];
-            }
-        };
+        const Search = (props) => <IconBase {...props}><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></IconBase>;
+        const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></IconBase>;
 
         // 頭像生成輔助函式 (限制為男性特徵)
         const getMaleAvatar = (seed) => {
@@ -87,7 +69,12 @@
 
         const PlayerModal = ({ player, onClose }) => {
             if (!player) return null;
-            const stats = getMockStats(player.position);
+
+            const handleScoutingReport = () => {
+                // Open a Google search for the player's scouting report
+                const query = encodeURIComponent(`${player.name} ${player.group === '美職組' ? 'scouting report baseball' : '棒球 數據 報告'}`);
+                window.open(`https://www.google.com/search?q=${query}`, '_blank');
+            };
 
             return (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" onClick={onClose}>
@@ -141,25 +128,27 @@
 
                     <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center">
-                        <BarChart2 size={14} className="mr-1.5" />
-                        2025 賽季預測數據
+                        <Info size={14} className="mr-1.5" />
+                        球員基本資料
                         </h4>
-                        <div className="grid grid-cols-4 gap-2 text-center">
-                        {stats.map((stat, idx) => (
-                            <div key={idx} className="flex flex-col">
-                            <span className="text-xl font-bold text-slate-800 font-mono">{stat.value}</span>
-                            <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">{stat.label}</span>
+                        <div className="grid grid-cols-2 gap-4">
+                             <div className="flex flex-col bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                <span className="text-xs text-slate-400 mb-1 flex items-center"><Briefcase size={12} className="mr-1"/> 所屬球隊</span>
+                                <span className="text-slate-800 font-bold">{player.team}</span>
                             </div>
-                        ))}
+                            <div className="flex flex-col bg-white p-3 rounded-lg border border-slate-100 shadow-sm">
+                                <span className="text-xs text-slate-400 mb-1 flex items-center"><Activity size={12} className="mr-1"/> 投打習慣</span>
+                                <span className="text-slate-800 font-bold font-mono">{player.hand}</span>
+                            </div>
                         </div>
                     </div>
                     
-                    <div className="mt-6 flex space-x-3">
-                        <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center">
-                        <Zap size={16} className="mr-2" /> 追蹤球員
-                        </button>
-                        <button className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 py-2.5 rounded-lg font-medium text-sm transition-colors flex items-center justify-center">
-                        <Shield size={16} className="mr-2" /> 球探報告
+                    <div className="mt-6">
+                        <button 
+                            onClick={handleScoutingReport}
+                            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold text-sm transition-all shadow-md hover:shadow-lg flex items-center justify-center transform active:scale-95"
+                        >
+                        <Search size={18} className="mr-2" /> 搜尋更多球員數據與新聞
                         </button>
                     </div>
                     </div>
@@ -254,40 +243,40 @@
 
             const players = [
                 // 日職組
-                { id: 1, name: '古林睿煬', group: '日職組', position: '先發投手', level: 'NPB', desc: '效力於北海道日本火腿鬥士。擁有勁爆速球的王牌，在日職展現強大的壓制力。' },
-                { id: 2, name: '孫易磊', group: '日職組', position: '投手', level: 'NPB', desc: '效力於北海道日本火腿鬥士。球速與變化球控制能力皆屬頂尖，擔當重要局數。' },
-                { id: 3, name: '徐若熙', group: '日職組', position: '先發投手', level: 'NPB', desc: '效力於福岡軟銀鷹。擁有「龍之子」稱號，極品變速球與剛猛直球是他的招牌武器。' },
-                { id: 4, name: '林安可', group: '日職組', position: '外野手', level: 'NPB', desc: '強力左打重砲，轉戰日職後打擊技巧更上一層樓，提供關鍵長打火力。' },
-                { id: 5, name: '張峻瑋', group: '日職組', position: '投手', level: 'NPB', desc: '效力於福岡軟銀鷹。年輕且具備剛猛球速的右投，經過日職體系磨練後更加穩定。' },
+                { id: 1, name: '古林睿煬', group: '日職組', position: '先發投手', level: 'NPB', team: '日本火腿', hand: '右投右打', desc: '擁有勁爆速球的王牌，在日職展現強大的壓制力。' },
+                { id: 2, name: '孫易磊', group: '日職組', position: '投手', level: 'NPB', team: '日本火腿', hand: '右投左打', desc: '球速與變化球控制能力皆屬頂尖，擔當重要局數。' },
+                { id: 3, name: '徐若熙', group: '日職組', position: '先發投手', level: 'NPB', team: '福岡軟銀', hand: '右投右打', desc: '擁有「龍之子」稱號，極品變速球與剛猛直球是他的招牌武器。' },
+                { id: 4, name: '林安可', group: '日職組', position: '外野手', level: 'NPB', team: '統一獅(旅外)', hand: '左投左打', desc: '強力左打重砲，打擊技巧高超，提供關鍵長打火力。(假設旅日)' },
+                { id: 5, name: '張峻瑋', group: '日職組', position: '投手', level: 'NPB', team: '福岡軟銀', hand: '右投右打', desc: '年輕且具備剛猛球速的右投，經過日職體系磨練後更加穩定。' },
 
                 // 美職組
-                { id: 30, name: '林家正', group: '美職組', position: '捕手', level: 'FA', desc: '目前為自由球員(FA)。旅美經驗豐富，以極佳的引導能力著稱，是投手群信賴的指揮官。' },
-                { id: 6, name: '林維恩', group: '美職組', position: '投手', level: 'A+', desc: '效力於奧克蘭運動家體系。極具天賦的左投，直球尾勁十足，是未來的王牌人選。' },
-                { id: 7, name: '林昱珉', group: '美職組', position: '先發投手', level: 'AAA', desc: '效力於亞利桑那響尾蛇體系。距離大聯盟僅一步之遙，詭譎的投球節奏讓打者難以適應。' },
-                { id: 8, name: '莊陳仲敖', group: '美職組', position: '投手', level: 'AA', desc: '效力於奧克蘭運動家體系。擁有一顆決勝指叉球，適合作為拆彈專家。' },
-                { id: 9, name: '沙子宸', group: '美職組', position: '投手', level: 'A+', desc: '效力於奧克蘭運動家體系。身材高大的右投手，球質重且進壘角度刁鑽。' },
-                { id: 10, name: '陳柏毓', group: '美職組', position: '先發投手', level: 'AA', desc: '效力於匹茲堡海盜體系。以控球精準著稱，心理素質強大，適合投關鍵戰役。' },
-                { id: 11, name: 'Jonathon Long', group: '美職組', position: '內野手', level: 'AA', desc: '「龍仔」，效力於芝加哥小熊體系。台裔強力重砲，是中心打線的解答。' },
-                { id: 12, name: '李灝宇', group: '美職組', position: '二壘手', level: 'AAA', desc: '效力於底特律老虎體系。「台灣怪力男」，打擊實力已達3A水準，攻擊死角少。' },
-                { id: 13, name: '鄭宗哲', group: '美職組', position: '游擊手', level: 'AAA', desc: '效力於華盛頓國民體系。攻守俱佳的全能游擊手，速度與守備範圍頂尖。' },
-                { id: 14, name: 'Stuart Fairchild', group: '美職組', position: '外野手', level: 'MLB', desc: '「費仔」，現役大聯盟選手。擁有頂尖的守備範圍與速度，能鎮守中外野大關。' },
+                { id: 30, name: '林家正', group: '美職組', position: '捕手', level: 'FA', team: '自由球員', hand: '右投右打', desc: '旅美經驗豐富，以極佳的引導能力著稱，是投手群信賴的指揮官。' },
+                { id: 6, name: '林維恩', group: '美職組', position: '投手', level: 'A+', team: '運動家體系', hand: '左投左打', desc: '極具天賦的左投，直球尾勁十足，是未來的王牌人選。' },
+                { id: 7, name: '林昱珉', group: '美職組', position: '先發投手', level: 'AAA', team: '響尾蛇體系', hand: '左投左打', desc: '距離大聯盟僅一步之遙，詭譎的投球節奏讓打者難以適應。' },
+                { id: 8, name: '莊陳仲敖', group: '美職組', position: '投手', level: 'AA', team: '運動家體系', hand: '右投右打', desc: '擁有一顆決勝指叉球，適合作為拆彈專家。' },
+                { id: 9, name: '沙子宸', group: '美職組', position: '投手', level: 'A+', team: '運動家體系', hand: '右投右打', desc: '身材高大的右投手，球質重且進壘角度刁鑽。' },
+                { id: 10, name: '陳柏毓', group: '美職組', position: '先發投手', level: 'AA', team: '海盜體系', hand: '右投左打', desc: '以控球精準著稱，心理素質強大，適合投關鍵戰役。' },
+                { id: 11, name: 'Jonathon Long', group: '美職組', position: '內野手', level: 'AA', team: '小熊體系', hand: '右投右打', desc: '「龍仔」，台裔強力重砲，是中心打線的解答。' },
+                { id: 12, name: '李灝宇', group: '美職組', position: '二壘手', level: 'AAA', team: '老虎體系', hand: '右投右打', desc: '「台灣怪力男」，打擊實力已達3A水準，攻擊死角少。' },
+                { id: 13, name: '鄭宗哲', group: '美職組', position: '游擊手', level: 'AAA', team: '國民體系', hand: '右投左打', desc: '攻守俱佳的全能游擊手，速度與守備範圍頂尖。' },
+                { id: 14, name: 'Stuart Fairchild', group: '美職組', position: '外野手', level: 'MLB', team: '紅人', hand: '右投右打', desc: '「費仔」，現役大聯盟選手。擁有頂尖的守備範圍與速度。' },
 
                 // 中職組
-                { id: 15, name: '胡智爲', group: '中職組', position: '先發投手', level: 'CPBL', desc: '統一獅先發大將。經驗豐富的大賢拜，能吃下長局數，是教練團調度的一枚活棋。' },
-                { id: 16, name: '張奕', group: '中職組', position: '投手', level: 'CPBL', desc: '富邦悍將牛棚鐵壁。曾創下12強最佳投手紀錄，回歸中職後表現穩健。' },
-                { id: 17, name: '陳冠宇', group: '中職組', position: '投手', level: 'CPBL', desc: '樂天桃猿。微笑左投，國際賽經驗最豐富的選手之一，專門對付左打部隊。' },
-                { id: 18, name: '林凱威', group: '中職組', position: '投手', level: 'CPBL', desc: '味全龍。以滑球著稱的牛棚大將，擁有強烈的三振能力與霸氣。' },
-                { id: 19, name: '鄭浩均', group: '中職組', position: '先發投手', level: 'CPBL', desc: '中信兄弟。「美美」擁有狂野的球風與高品質直球，能瞬間點燃球隊氣勢。' },
-                { id: 20, name: '曾峻岳', group: '中職組', position: '後援投手', level: 'CPBL', desc: '富邦悍將。中職最強終結者之一，動輒155km以上的火球是關門的最佳保證。' },
-                { id: 21, name: '林詩翔', group: '中職組', position: '投手', level: 'CPBL', desc: '台鋼雄鷹。新生代潛力投手，擁有不錯的球速條件，是牛棚的新戰力。' },
-                { id: 22, name: '蔣少宏', group: '中職組', position: '捕手', level: 'CPBL', desc: '味全龍。配球靈活且阻殺能力優異，能有效引導投手群發揮最大實力。' },
-                { id: 23, name: '吉力吉撈・鞏冠', group: '中職組', position: '捕手/DH', level: 'CPBL', desc: '味全龍。擁有美式強力揮棒風格，是目前國內長打火力最兇猛的捕手砲。' },
-                { id: 24, name: '張育成', group: '中職組', position: '內野手', level: 'CPBL', desc: '富邦悍將。「國防部長」坐鎮，擁有大聯盟級別的擊球初速與守備，球隊的精神領袖。' },
-                { id: 25, name: '江坤宇', group: '中職組', position: '游擊手', level: 'CPBL', desc: '中信兄弟。「小可愛」擁有銅牆鐵壁般的守備，是內野防線最令人安心的存在。' },
-                { id: 26, name: '吳念庭', group: '中職組', position: '內野手', level: 'CPBL', desc: '台鋼雄鷹。得點圈之鬼，選球精準且戰術執行力高，是關鍵時刻的一擊人選。' },
-                { id: 27, name: '林子偉', group: '中職組', position: '工具人', level: 'CPBL', desc: '樂天桃猿。擁有大聯盟資歷，列為UTIL工具人，能守內外野多個位置。' },
-                { id: 28, name: '陳傑憲', group: '中職組', position: '外野手', level: 'CPBL', desc: '統一獅。台灣隊長，安打製造機，擁有極佳的領袖氣質與纏鬥能力。' },
-                { id: 29, name: '陳晨威', group: '中職組', position: '外野手', level: 'CPBL', desc: '樂天桃猿。光速神威，擁有破壞力十足的腳程，上壘就能給予對手極大壓力。' },
+                { id: 15, name: '胡智爲', group: '中職組', position: '先發投手', level: 'CPBL', team: '統一獅', hand: '右投右打', desc: '經驗豐富的大賢拜，能吃下長局數，是教練團調度的一枚活棋。' },
+                { id: 16, name: '張奕', group: '中職組', position: '投手', level: 'CPBL', team: '富邦悍將', hand: '右投右打', desc: '曾創下12強最佳投手紀錄，回歸中職後表現穩健。' },
+                { id: 17, name: '陳冠宇', group: '中職組', position: '投手', level: 'CPBL', team: '樂天桃猿', hand: '左投左打', desc: '微笑左投，國際賽經驗最豐富的選手之一，專門對付左打部隊。' },
+                { id: 18, name: '林凱威', group: '中職組', position: '投手', level: 'CPBL', team: '味全龍', hand: '右投右打', desc: '以滑球著稱的牛棚大將，擁有強烈的三振能力與霸氣。' },
+                { id: 19, name: '鄭浩均', group: '中職組', position: '先發投手', level: 'CPBL', team: '中信兄弟', hand: '右投右打', desc: '「美美」擁有狂野的球風與高品質直球，能瞬間點燃球隊氣勢。' },
+                { id: 20, name: '曾峻岳', group: '中職組', position: '後援投手', level: 'CPBL', team: '富邦悍將', hand: '右投右打', desc: '中職最強終結者之一，動輒155km以上的火球是關門的最佳保證。' },
+                { id: 21, name: '林詩翔', group: '中職組', position: '投手', level: 'CPBL', team: '台鋼雄鷹', hand: '右投左打', desc: '新生代潛力投手，擁有不錯的球速條件，是牛棚的新戰力。' },
+                { id: 22, name: '蔣少宏', group: '中職組', position: '捕手', level: 'CPBL', team: '味全龍', hand: '右投右打', desc: '配球靈活且阻殺能力優異，能有效引導投手群發揮最大實力。' },
+                { id: 23, name: '吉力吉撈・鞏冠', group: '中職組', position: '捕手/DH', level: 'CPBL', team: '味全龍', hand: '右投右打', desc: '擁有美式強力揮棒風格，是目前國內長打火力最兇猛的捕手砲。' },
+                { id: 24, name: '張育成', group: '中職組', position: '內野手', level: 'CPBL', team: '富邦悍將', hand: '右投右打', desc: '「國防部長」坐鎮，擁有大聯盟級別的擊球初速與守備。' },
+                { id: 25, name: '江坤宇', group: '中職組', position: '游擊手', level: 'CPBL', team: '中信兄弟', hand: '右投右打', desc: '「小可愛」擁有銅牆鐵壁般的守備，是內野防線最令人安心的存在。' },
+                { id: 26, name: '吳念庭', group: '中職組', position: '內野手', level: 'CPBL', team: '台鋼雄鷹', hand: '右投左打', desc: '得點圈之鬼，選球精準且戰術執行力高，是關鍵時刻的一擊人選。' },
+                { id: 27, name: '林子偉', group: '中職組', position: '工具人', level: 'CPBL', team: '樂天桃猿', hand: '右投左打', desc: '擁有大聯盟資歷，列為UTIL工具人，能守內外野多個位置。' },
+                { id: 28, name: '陳傑憲', group: '中職組', position: '外野手', level: 'CPBL', team: '統一獅', hand: '右投左打', desc: '台灣隊長，安打製造機，擁有極佳的領袖氣質與纏鬥能力。' },
+                { id: 29, name: '陳晨威', group: '中職組', position: '外野手', level: 'CPBL', team: '樂天桃猿', hand: '右投左打', desc: '光速神威，擁有破壞力十足的腳程，上壘就能給予對手極大壓力。' },
             ];
 
             const filteredPlayers = players.filter(p => {
