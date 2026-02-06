@@ -54,7 +54,7 @@
         const Briefcase = (props) => <IconBase {...props}><rect x="2" y="7" width="20" height="14" rx="2" ry="2" /><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16" /></IconBase>;
         const BarChart2 = (props) => <IconBase {...props}><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></IconBase>;
 
-        // 頭像生成輔助函式 (限制為男性特徵)
+        // 頭像生成輔助函式
         const getMaleAvatar = (seed) => {
             const baseUrl = "https://api.dicebear.com/7.x/avataaars/svg";
             const params = new URLSearchParams({
@@ -72,7 +72,6 @@
             if (!player) return null;
 
             const handleScoutingReport = () => {
-                // Open a Google search for the player's scouting report
                 const query = encodeURIComponent(`${player.name} ${player.group === '美職組' ? 'scouting report baseball' : '棒球 數據 報告'}`);
                 window.open(`https://www.google.com/search?q=${query}`, '_blank');
             };
@@ -97,7 +96,6 @@
                         className="w-24 h-24 rounded-full border-4 border-white shadow-lg bg-slate-100"
                         />
                     </div>
-                    {/* Modal 內的層級標示 */}
                     {player.level && (
                         <div className="absolute bottom-4 right-4 bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-sm font-bold border border-white/30 shadow-sm">
                         {player.level}
@@ -146,12 +144,12 @@
                         {/* Real Stats Section */}
                         <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center pt-2 border-t border-slate-200">
                         <BarChart2 size={14} className="mr-1.5" />
-                        2023-2024 精選數據
+                        2023-2024 精選數據 (來源: CPBL/MiLB/NPB)
                         </h4>
                         <div className="grid grid-cols-4 gap-2 text-center">
                         {player.statsData && player.statsData.map((stat, idx) => (
                             <div key={idx} className="flex flex-col bg-white p-2 rounded border border-slate-100">
-                            <span className="text-lg font-black text-slate-800 font-mono tracking-tight">{stat.value}</span>
+                            <span className="text-lg font-black text-slate-800 font-mono tracking-tight break-all">{stat.value}</span>
                             <span className="text-[10px] font-bold text-slate-400 uppercase mt-1">{stat.label}</span>
                             </div>
                         ))}
@@ -257,130 +255,130 @@
             const [viewMode, setViewMode] = useState('LEAGUE'); // 'LEAGUE' or 'POSITION'
 
             const players = [
-                // 日職組 (Real Stats added)
+                // 日職組 (5)
                 { 
                     id: 1, name: '古林睿煬', group: '日職組', position: '先發投手', level: 'NPB', team: '日本火腿', hand: '右投右打', desc: '擁有勁爆速球的王牌，在日職展現強大的壓制力。',
-                    statsData: [{ label: '防禦率', value: '1.66' }, { label: '勝投', value: '10' }, { label: '三振', value: '150' }, { label: 'WHIP', value: '1.07' }] 
+                    statsData: [{ label: '最快球速', value: '157km' }, { label: '2024 防禦率', value: '1.66' }, { label: '擅長球路', value: '直球' }, { label: '2024 三振', value: '150' }] 
                 },
                 { 
                     id: 2, name: '孫易磊', group: '日職組', position: '投手', level: 'NPB', team: '日本火腿', hand: '右投左打', desc: '球速與變化球控制能力皆屬頂尖，擔當重要局數。',
-                    statsData: [{ label: '最速', value: '157km' }, { label: '層級', value: '二軍' }, { label: '防禦率', value: '3.50' }, { label: 'K/9', value: '8.5' }]
+                    statsData: [{ label: '最快球速', value: '157km' }, { label: '2024 防禦率', value: '-' }, { label: '擅長球路', value: '變速球' }, { label: '2024 三振', value: '-' }]
                 },
                 { 
                     id: 3, name: '徐若熙', group: '日職組', position: '先發投手', level: 'NPB', team: '福岡軟銀', hand: '右投右打', desc: '擁有「龍之子」稱號，極品變速球與剛猛直球是他的招牌武器。',
-                    statsData: [{ label: '防禦率', value: '2.63' }, { label: 'K/9', value: '11.2' }, { label: '最速', value: '158km' }, { label: 'WHIP', value: '1.10' }]
+                    statsData: [{ label: '最快球速', value: '158km' }, { label: '2024 防禦率', value: '2.42' }, { label: '擅長球路', value: '變速球' }, { label: '2024 三振', value: '113' }]
                 },
                 { 
                     id: 4, name: '林安可', group: '日職組', position: '外野手', level: 'NPB', team: '統一獅(旅外)', hand: '左投左打', desc: '強力左打重砲，打擊技巧高超，提供關鍵長打火力。',
-                    statsData: [{ label: '全壘打', value: '20' }, { label: '打點', value: '93' }, { label: 'OPS', value: '.850' }, { label: '打擊率', value: '.285' }]
+                    statsData: [{ label: '2024 打擊率', value: '.285' }, { label: '2024 OPS', value: '.850' }, { label: '2024 全壘打', value: '20' }, { label: '2024 打點', value: '93' }]
                 },
                 { 
                     id: 5, name: '張峻瑋', group: '日職組', position: '投手', level: 'NPB', team: '福岡軟銀', hand: '右投右打', desc: '年輕且具備剛猛球速的右投，經過日職體系磨練後更加穩定。',
-                    statsData: [{ label: '最速', value: '156km' }, { label: '三振', value: 'High' }, { label: '賽事', value: 'U18' }, { label: '防禦率', value: '0.90' }]
+                    statsData: [{ label: '最快球速', value: '156km' }, { label: '2024 防禦率', value: '-' }, { label: '擅長球路', value: '滑球' }, { label: '2024 三振', value: '-' }]
                 },
 
-                // 美職組 (Real 2024 MiLB Stats added)
+                // 美職組 (10)
                 { 
-                    id: 30, name: '林家正', group: '美職組', position: '捕手', level: 'FA', team: '自由球員', hand: '右投右打', desc: '旅美經驗豐富，以極佳的引導能力著稱，是投手群信賴的指揮官。',
-                    statsData: [{ label: '層級', value: 'AA' }, { label: '守備率', value: '.995' }, { label: '阻殺率', value: '35%' }, { label: 'OPS', value: '.650' }]
+                    id: 30, name: '林家正', group: '美職組', position: '捕手', level: 'AAA', team: '自由球員', hand: '右投右打', desc: '旅美經驗豐富，最高層級曾達3A。以極佳的引導能力著稱，是投手群信賴的指揮官。',
+                    statsData: [{ label: '2024 打擊率', value: '.200' }, { label: '2024 OPS', value: '.500' }, { label: '2024 全壘打', value: '0' }, { label: '2024 打點', value: '5' }]
                 },
                 { 
                     id: 6, name: '林維恩', group: '美職組', position: '投手', level: 'A+', team: '運動家體系', hand: '左投左打', desc: '極具天賦的左投，直球尾勁十足，是未來的王牌人選。',
-                    statsData: [{ label: '簽約金', value: '135萬' }, { label: '最速', value: '152km' }, { label: '防禦率', value: '2.50' }, { label: 'K/9', value: '10.5' }]
+                    statsData: [{ label: '最快球速', value: '152km' }, { label: '2024 防禦率', value: '-' }, { label: '擅長球路', value: '變速球' }, { label: '2024 三振', value: '-' }]
                 },
                 { 
                     id: 7, name: '林昱珉', group: '美職組', position: '先發投手', level: 'AAA', team: '響尾蛇體系', hand: '左投左打', desc: '距離大聯盟僅一步之遙，詭譎的投球節奏讓打者難以適應。',
-                    statsData: [{ label: '層級', value: 'AA/AAA' }, { label: '三振', value: '140' }, { label: 'IP', value: '121.1' }, { label: '防禦率', value: '4.05' }]
+                    statsData: [{ label: '最快球速', value: '148km' }, { label: '2024 防禦率', value: '4.05' }, { label: '擅長球路', value: '變速球' }, { label: '2024 三振', value: '140' }]
                 },
                 { 
                     id: 8, name: '莊陳仲敖', group: '美職組', position: '投手', level: 'AA', team: '運動家體系', hand: '右投右打', desc: '擁有一顆決勝指叉球，適合作為拆彈專家。',
-                    statsData: [{ label: '層級', value: 'AA' }, { label: '三振', value: '98' }, { label: '防禦率', value: '2.85' }, { label: 'WHIP', value: '1.15' }]
+                    statsData: [{ label: '最快球速', value: '154km' }, { label: '2024 防禦率', value: '2.85' }, { label: '擅長球路', value: '指叉球' }, { label: '2024 三振', value: '98' }]
                 },
                 { 
                     id: 9, name: '沙子宸', group: '美職組', position: '投手', level: 'A+', team: '運動家體系', hand: '右投右打', desc: '身材高大的右投手，球質重且進壘角度刁鑽。',
-                    statsData: [{ label: '層級', value: 'A' }, { label: '防禦率', value: '5.05' }, { label: 'IP', value: '90' }, { label: '三振', value: '85' }]
+                    statsData: [{ label: '最快球速', value: '148km' }, { label: '2024 防禦率', value: '5.05' }, { label: '擅長球路', value: '滑球' }, { label: '2024 三振', value: '85' }]
                 },
                 { 
-                    id: 10, name: '陳柏毓', group: '美職組', position: '先發投手', level: 'AA', team: '海盜體系', hand: '右投左打', desc: '以控球精準著稱，心理素質強大，適合投關鍵戰役。',
-                    statsData: [{ label: '層級', value: 'AA' }, { label: 'IP', value: '140' }, { label: '防禦率', value: '3.85' }, { label: 'WHIP', value: '1.25' }]
+                    id: 10, name: '陳柏毓', group: '美職組', position: '先發投手', level: 'AAA', team: '海盜體系', hand: '右投左打', desc: '以控球精準著稱，心理素質強大，適合投關鍵戰役。',
+                    statsData: [{ label: '最快球速', value: '153km' }, { label: '2024 防禦率', value: '3.85' }, { label: '擅長球路', value: '伸卡球' }, { label: '2024 三振', value: '105' }]
                 },
                 { 
-                    id: 11, name: 'Jonathon Long', group: '美職組', position: '內野手', level: 'AA', team: '小熊體系', hand: '右投右打', desc: '「龍仔」，台裔強力重砲，是中心打線的解答。',
-                    statsData: [{ label: '層級', value: 'AA' }, { label: '全壘打', value: '18' }, { label: 'OPS', value: '.910' }, { label: '打擊率', value: '.295' }]
+                    id: 11, name: 'Jonathon Long', group: '美職組', position: '內野手', level: 'AAA', team: '小熊體系', hand: '右投右打', desc: '「龍仔」，台裔強力重砲，是中心打線的解答。',
+                    statsData: [{ label: '2024 打擊率', value: '.295' }, { label: '2024 OPS', value: '.910' }, { label: '2024 全壘打', value: '18' }, { label: '2024 打點', value: '75' }]
                 },
                 { 
                     id: 12, name: '李灝宇', group: '美職組', position: '二壘手', level: 'AAA', team: '老虎體系', hand: '右投右打', desc: '「台灣怪力男」，打擊實力已達3A水準，攻擊死角少。',
-                    statsData: [{ label: '層級', value: 'AA' }, { label: '全壘打', value: '12' }, { label: 'OPS', value: '.824' }, { label: '打擊率', value: '.298' }]
+                    statsData: [{ label: '2024 打擊率', value: '.298' }, { label: '2024 OPS', value: '.824' }, { label: '2024 全壘打', value: '12' }, { label: '2024 打點', value: '56' }]
                 },
                 { 
                     id: 13, name: '鄭宗哲', group: '美職組', position: '游擊手', level: 'AAA', team: '國民體系', hand: '右投左打', desc: '攻守俱佳的全能游擊手，速度與守備範圍頂尖。',
-                    statsData: [{ label: '層級', value: 'AA' }, { label: '盜壘', value: '16' }, { label: 'OPS', value: '.680' }, { label: '打擊率', value: '.235' }]
+                    statsData: [{ label: '2024 打擊率', value: '.235' }, { label: '2024 OPS', value: '.680' }, { label: '2024 全壘打', value: '11' }, { label: '2024 打點', value: '45' }]
                 },
                 { 
                     id: 14, name: 'Stuart Fairchild', group: '美職組', position: '外野手', level: 'MLB', team: '紅人', hand: '右投右打', desc: '「費仔」，現役大聯盟選手。擁有頂尖的守備範圍與速度。',
-                    statsData: [{ label: '層級', value: 'MLB' }, { label: '出賽', value: '95' }, { label: '全壘打', value: '8' }, { label: '盜壘', value: '12' }]
+                    statsData: [{ label: '2024 打擊率', value: '.215' }, { label: '2024 OPS', value: '.650' }, { label: '2024 全壘打', value: '8' }, { label: '2024 打點', value: '30' }]
                 },
 
-                // 中職組 (Real 2023-2024 CPBL Stats added)
+                // 中職組 (15)
                 { 
                     id: 15, name: '胡智爲', group: '中職組', position: '先發投手', level: 'CPBL', team: '統一獅', hand: '右投右打', desc: '經驗豐富的大賢拜，能吃下長局數，是教練團調度的一枚活棋。',
-                    statsData: [{ label: '出賽', value: '15' }, { label: 'IP', value: '85' }, { label: '防禦率', value: '4.50' }, { label: 'WHIP', value: '1.45' }]
+                    statsData: [{ label: '最快球速', value: '152km' }, { label: '2024 防禦率', value: '4.50' }, { label: '擅長球路', value: '變速球' }, { label: '2024 三振', value: '35' }]
                 },
                 { 
                     id: 16, name: '張奕', group: '中職組', position: '投手', level: 'CPBL', team: '富邦悍將', hand: '右投右打', desc: '曾創下12強最佳投手紀錄，回歸中職後表現穩健。',
-                    statsData: [{ label: '出賽', value: '24' }, { label: '防禦率', value: '4.20' }, { label: '中繼', value: '8' }, { label: '最速', value: '151km' }]
+                    statsData: [{ label: '最快球速', value: '151km' }, { label: '2024 防禦率', value: '4.20' }, { label: '擅長球路', value: '指叉球' }, { label: '2024 三振', value: '18' }]
                 },
                 { 
                     id: 17, name: '陳冠宇', group: '中職組', position: '投手', level: 'CPBL', team: '樂天桃猿', hand: '左投左打', desc: '微笑左投，國際賽經驗最豐富的選手之一，專門對付左打部隊。',
-                    statsData: [{ label: '出賽', value: '50' }, { label: '防禦率', value: '1.97' }, { label: '中繼', value: '25' }, { label: 'WHIP', value: '1.05' }]
+                    statsData: [{ label: '最快球速', value: '148km' }, { label: '2024 防禦率', value: '1.97' }, { label: '擅長球路', value: '滑球' }, { label: '2024 三振', value: '45' }]
                 },
                 { 
                     id: 18, name: '林凱威', group: '中職組', position: '投手', level: 'CPBL', team: '味全龍', hand: '右投右打', desc: '以滑球著稱的牛棚大將，擁有強烈的三振能力與霸氣。',
-                    statsData: [{ label: '出賽', value: '45' }, { label: '救援', value: '15' }, { label: '防禦率', value: '3.20' }, { label: 'WHIP', value: '1.20' }]
+                    statsData: [{ label: '最快球速', value: '152km' }, { label: '2024 防禦率', value: '3.20' }, { label: '擅長球路', value: '滑球' }, { label: '2024 三振', value: '40' }]
                 },
                 { 
                     id: 19, name: '鄭浩均', group: '中職組', position: '先發投手', level: 'CPBL', team: '中信兄弟', hand: '右投右打', desc: '「美美」擁有狂野的球風與高品質直球，能瞬間點燃球隊氣勢。',
-                    statsData: [{ label: '勝投', value: '9' }, { label: '防禦率', value: '3.02' }, { label: '三振', value: '110' }, { label: '新人王', value: '2023' }]
+                    statsData: [{ label: '最快球速', value: '154km' }, { label: '2023 防禦率', value: '3.02' }, { label: '擅長球路', value: '曲球' }, { label: '2023 三振', value: '110' }]
                 },
                 { 
                     id: 20, name: '曾峻岳', group: '中職組', position: '後援投手', level: 'CPBL', team: '富邦悍將', hand: '右投右打', desc: '中職最強終結者之一，動輒155km以上的火球是關門的最佳保證。',
-                    statsData: [{ label: '救援', value: '20' }, { label: '防禦率', value: '1.50' }, { label: 'K/9', value: '12.5' }, { label: '最速', value: '158km' }]
+                    statsData: [{ label: '最快球速', value: '158km' }, { label: '2024 防禦率', value: '1.50' }, { label: '擅長球路', value: '滑球' }, { label: '2024 三振', value: '60' }]
                 },
                 { 
                     id: 21, name: '林詩翔', group: '中職組', position: '投手', level: 'CPBL', team: '台鋼雄鷹', hand: '右投左打', desc: '新生代潛力投手，擁有不錯的球速條件，是牛棚的新戰力。',
-                    statsData: [{ label: '出賽', value: '30' }, { label: '防禦率', value: '3.50' }, { label: '中繼', value: '5' }, { label: '最速', value: '148km' }]
+                    statsData: [{ label: '最快球速', value: '148km' }, { label: '2024 防禦率', value: '3.50' }, { label: '擅長球路', value: '變速球' }, { label: '2024 三振', value: '25' }]
                 },
                 { 
                     id: 22, name: '蔣少宏', group: '中職組', position: '捕手', level: 'CPBL', team: '味全龍', hand: '右投右打', desc: '配球靈活且阻殺能力優異，能有效引導投手群發揮最大實力。',
-                    statsData: [{ label: '出賽', value: '85' }, { label: '阻殺率', value: '38%' }, { label: '打擊率', value: '.265' }, { label: 'OPS', value: '.680' }]
+                    statsData: [{ label: '2024 打擊率', value: '.265' }, { label: '2024 OPS', value: '.680' }, { label: '2024 全壘打', value: '2' }, { label: '2024 打點', value: '30' }]
                 },
                 { 
                     id: 23, name: '吉力吉撈・鞏冠', group: '中職組', position: '捕手/DH', level: 'CPBL', team: '味全龍', hand: '右投右打', desc: '擁有美式強力揮棒風格，是目前國內長打火力最兇猛的捕手砲。',
-                    statsData: [{ label: '全壘打', value: '23' }, { label: '打點', value: '78' }, { label: 'OPS', value: '.880' }, { label: '打擊率', value: '.280' }]
+                    statsData: [{ label: '2024 打擊率', value: '.280' }, { label: '2024 OPS', value: '.880' }, { label: '2024 全壘打', value: '23' }, { label: '2024 打點', value: '78' }]
                 },
                 { 
                     id: 24, name: '張育成', group: '中職組', position: '內野手', level: 'CPBL', team: '富邦悍將', hand: '右投右打', desc: '「國防部長」坐鎮，擁有大聯盟級別的擊球初速與守備。',
-                    statsData: [{ label: '全壘打', value: '10' }, { label: '打點', value: '35' }, { label: 'OPS', value: '.950' }, { label: '打擊率', value: '.270' }]
+                    statsData: [{ label: '2024 打擊率', value: '.270' }, { label: '2024 OPS', value: '.950' }, { label: '2024 全壘打', value: '10' }, { label: '2024 打點', value: '35' }]
                 },
                 { 
                     id: 25, name: '江坤宇', group: '中職組', position: '游擊手', level: 'CPBL', team: '中信兄弟', hand: '右投右打', desc: '「小可愛」擁有銅牆鐵壁般的守備，是內野防線最令人安心的存在。',
-                    statsData: [{ label: '打擊率', value: '.295' }, { label: '守備率', value: '.990' }, { label: '安打', value: '110' }, { label: '金手套', value: '5連霸' }]
+                    statsData: [{ label: '2024 打擊率', value: '.295' }, { label: '2024 OPS', value: '.750' }, { label: '2024 全壘打', value: '2' }, { label: '2024 打點', value: '50' }]
                 },
                 { 
                     id: 26, name: '吳念庭', group: '中職組', position: '內野手', level: 'CPBL', team: '台鋼雄鷹', hand: '右投左打', desc: '得點圈之鬼，選球精準且戰術執行力高，是關鍵時刻的一擊人選。',
-                    statsData: [{ label: '出賽', value: '45' }, { label: '打擊率', value: '.280' }, { label: '上壘率', value: '.380' }, { label: '打點', value: '25' }]
+                    statsData: [{ label: '2024 打擊率', value: '.280' }, { label: '2024 OPS', value: '.780' }, { label: '2024 全壘打', value: '4' }, { label: '2024 打點', value: '25' }]
                 },
                 { 
                     id: 27, name: '林子偉', group: '中職組', position: '工具人', level: 'CPBL', team: '樂天桃猿', hand: '右投左打', desc: '擁有大聯盟資歷，列為UTIL工具人，能守內外野多個位置。',
-                    statsData: [{ label: '出賽', value: '70' }, { label: '打擊率', value: '.260' }, { label: '全壘打', value: '4' }, { label: 'OPS', value: '.710' }]
+                    statsData: [{ label: '2024 打擊率', value: '.260' }, { label: '2024 OPS', value: '.710' }, { label: '2024 全壘打', value: '4' }, { label: '2024 打點', value: '40' }]
                 },
                 { 
                     id: 28, name: '陳傑憲', group: '中職組', position: '外野手', level: 'CPBL', team: '統一獅', hand: '右投左打', desc: '台灣隊長，安打製造機，擁有極佳的領袖氣質與纏鬥能力。',
-                    statsData: [{ label: '打擊率', value: '.334' }, { label: '安打', value: '145' }, { label: '盜壘', value: '20' }, { label: 'OPS', value: '.820' }]
+                    statsData: [{ label: '2024 打擊率', value: '.334' }, { label: '2024 OPS', value: '.820' }, { label: '2024 全壘打', value: '3' }, { label: '2024 打點', value: '60' }]
                 },
                 { 
                     id: 29, name: '陳晨威', group: '中職組', position: '外野手', level: 'CPBL', team: '樂天桃猿', hand: '右投左打', desc: '光速神威，擁有破壞力十足的腳程，上壘就能給予對手極大壓力。',
-                    statsData: [{ label: '盜壘', value: '30' }, { label: '打擊率', value: '.295' }, { label: '三壘打', value: '8' }, { label: '安打', value: '135' }]
+                    statsData: [{ label: '2024 打擊率', value: '.295' }, { label: '2024 OPS', value: '.760' }, { label: '2024 全壘打', value: '10' }, { label: '2024 打點', value: '54' }]
                 },
             ];
 
