@@ -49,6 +49,8 @@
         const Shield = (props) => <IconBase {...props}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></IconBase>;
         const Target = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><circle cx="12" cy="12" r="6" /><circle cx="12" cy="12" r="2" /></IconBase>;
         const Crosshair = (props) => <IconBase {...props}><circle cx="12" cy="12" r="10" /><line x1="22" y1="12" x2="18" y2="12" /><line x1="6" y1="12" x2="2" y2="12" /><line x1="12" y1="6" x2="12" y2="2" /><line x1="12" y1="22" x2="12" y2="18" /></IconBase>;
+        const LayoutGrid = (props) => <IconBase {...props}><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /></IconBase>;
+        const Layers = (props) => <IconBase {...props}><polygon points="12 2 2 7 12 12 22 7 12 2" /><polyline points="2 17 12 22 22 17" /><polyline points="2 12 12 17 22 12" /></IconBase>;
 
         // 模擬數據生成器
         const getMockStats = (position) => {
@@ -248,6 +250,7 @@
             const [groupFilter, setGroupFilter] = useState('ALL');
             const [posFilter, setPosFilter] = useState('ALL');
             const [selectedPlayer, setSelectedPlayer] = useState(null);
+            const [viewMode, setViewMode] = useState('LEAGUE'); // 'LEAGUE' or 'POSITION'
 
             const players = [
                 // 日職組
@@ -291,18 +294,29 @@
                 const groupMatch = groupFilter === 'ALL' || p.group === groupFilter;
                 let posMatch = true;
                 if (posFilter !== 'ALL') {
-                if (posFilter === '投手') {
-                    posMatch = p.position.includes('投手');
-                } else if (posFilter === '捕手') {
-                    posMatch = p.position.includes('捕手');
-                } else if (posFilter === '內野手') {
-                    posMatch = p.position.includes('內野') || p.position.includes('一壘') || p.position.includes('二壘') || p.position.includes('三壘') || p.position.includes('游擊') || p.position.includes('工具');
-                } else if (posFilter === '外野手') {
-                    posMatch = p.position.includes('外野');
-                }
+                    if (posFilter === '投手') {
+                        posMatch = p.position.includes('投手');
+                    } else if (posFilter === '捕手') {
+                        posMatch = p.position.includes('捕手');
+                    } else if (posFilter === '內野手') {
+                        posMatch = p.position.includes('內野') || p.position.includes('一壘') || p.position.includes('二壘') || p.position.includes('三壘') || p.position.includes('游擊') || p.position.includes('工具');
+                    } else if (posFilter === '外野手') {
+                        posMatch = p.position.includes('外野');
+                    }
                 }
                 return groupMatch && posMatch;
             });
+
+            // Position helpers for 'Position View'
+            const getPlayersBySpecificPos = (type) => {
+                return filteredPlayers.filter(p => {
+                    if (type === '投手') return p.position.includes('投手');
+                    if (type === '捕手') return p.position.includes('捕手');
+                    if (type === '內野手') return p.position.includes('內野') || p.position.includes('一壘') || p.position.includes('二壘') || p.position.includes('三壘') || p.position.includes('游擊') || p.position.includes('工具');
+                    if (type === '外野手') return p.position.includes('外野');
+                    return false;
+                });
+            };
 
             const jpCount = players.filter(p => p.group === '日職組').length;
             const usCount = players.filter(p => p.group === '美職組').length;
@@ -355,54 +369,76 @@
                 {/* Filter Tabs Container */}
                 <div className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200 shadow-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
-                    <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-6">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between space-y-3 md:space-y-0">
                         
-                        {/* Group Filter */}
-                        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                        {[
-                            { id: 'ALL', label: '全部聯盟', icon: Users },
-                            { id: '日職組', label: '日職組', icon: Star },
-                            { id: '美職組', label: '美職組', icon: Globe },
-                            { id: '中職組', label: '中職組', icon: Trophy }
-                        ].map(tab => (
-                            <button
-                            key={tab.id}
-                            onClick={() => setGroupFilter(tab.id)}
-                            className={`flex items-center space-x-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap outline-none
-                                ${groupFilter === tab.id 
-                                ? 'bg-blue-600 text-white shadow-md' 
-                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-                            >
-                            <tab.icon size={14} />
-                            <span>{tab.label}</span>
-                            </button>
-                        ))}
+                        <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-6">
+                            {/* Group Filter */}
+                            <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                            {[
+                                { id: 'ALL', label: '全部聯盟', icon: Users },
+                                { id: '日職組', label: '日職組', icon: Star },
+                                { id: '美職組', label: '美職組', icon: Globe },
+                                { id: '中職組', label: '中職組', icon: Trophy }
+                            ].map(tab => (
+                                <button
+                                key={tab.id}
+                                onClick={() => setGroupFilter(tab.id)}
+                                className={`flex items-center space-x-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap outline-none
+                                    ${groupFilter === tab.id 
+                                    ? 'bg-blue-600 text-white shadow-md' 
+                                    : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
+                                >
+                                <tab.icon size={14} />
+                                <span>{tab.label}</span>
+                                </button>
+                            ))}
+                            </div>
+
+                            {/* Divider */}
+                            <div className="hidden md:block h-8 w-px bg-slate-200"></div>
+
+                            {/* Position Filter (Only show if viewMode is LEAGUE, otherwise it's redundant/confusing) */}
+                            {viewMode === 'LEAGUE' && (
+                                <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
+                                {[
+                                    { id: 'ALL', label: '所有位置', icon: Activity },
+                                    { id: '投手', label: '投手', icon: Crosshair },
+                                    { id: '捕手', label: '捕手', icon: Shield },
+                                    { id: '內野手', label: '內野手', icon: Users },
+                                    { id: '外野手', label: '外野手', icon: Target }
+                                ].map(pos => (
+                                    <button
+                                    key={pos.id}
+                                    onClick={() => setPosFilter(pos.id)}
+                                    className={`flex items-center space-x-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap outline-none border
+                                        ${posFilter === pos.id 
+                                        ? 'bg-white border-blue-600 text-blue-600 shadow-sm' 
+                                        : 'bg-white border-transparent text-slate-500 hover:bg-slate-50'}`}
+                                    >
+                                    <pos.icon size={14} />
+                                    <span>{pos.label}</span>
+                                    </button>
+                                ))}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Divider */}
-                        <div className="hidden md:block h-8 w-px bg-slate-200"></div>
-
-                        {/* Position Filter */}
-                        <div className="flex space-x-2 overflow-x-auto no-scrollbar pb-1 md:pb-0">
-                        {[
-                            { id: 'ALL', label: '所有位置', icon: Activity },
-                            { id: '投手', label: '投手', icon: Crosshair },
-                            { id: '捕手', label: '捕手', icon: Shield },
-                            { id: '內野手', label: '內野手', icon: Users },
-                            { id: '外野手', label: '外野手', icon: Target }
-                        ].map(pos => (
-                            <button
-                            key={pos.id}
-                            onClick={() => setPosFilter(pos.id)}
-                            className={`flex items-center space-x-1.5 px-4 py-2 rounded-full text-sm font-bold transition-all whitespace-nowrap outline-none border
-                                ${posFilter === pos.id 
-                                ? 'bg-white border-blue-600 text-blue-600 shadow-sm' 
-                                : 'bg-white border-transparent text-slate-500 hover:bg-slate-50'}`}
+                        {/* View Toggle */}
+                        <div className="flex bg-slate-200 p-1 rounded-lg shrink-0">
+                            <button 
+                                onClick={() => { setViewMode('LEAGUE'); setPosFilter('ALL'); }}
+                                className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'LEAGUE' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                             >
-                            <pos.icon size={14} />
-                            <span>{pos.label}</span>
+                                <LayoutGrid size={14} />
+                                <span>依聯盟</span>
                             </button>
-                        ))}
+                            <button 
+                                onClick={() => { setViewMode('POSITION'); setPosFilter('ALL'); }}
+                                className={`flex items-center space-x-1 px-3 py-1.5 rounded-md text-xs font-bold transition-all ${viewMode === 'POSITION' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Layers size={14} />
+                                <span>依位置分組</span>
+                            </button>
                         </div>
                     
                     </div>
@@ -437,11 +473,43 @@
                         </button>
                     </div>
                     ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {filteredPlayers.map(player => (
-                        <PlayerCard key={player.id} player={player} onClick={setSelectedPlayer} />
-                        ))}
-                    </div>
+                        <>
+                        {viewMode === 'LEAGUE' ? (
+                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                {filteredPlayers.map(player => (
+                                <PlayerCard key={player.id} player={player} onClick={setSelectedPlayer} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="space-y-12">
+                                {['投手', '捕手', '內野手', '外野手'].map(type => {
+                                    const typePlayers = getPlayersBySpecificPos(type);
+                                    if (typePlayers.length === 0) return null;
+                                    return (
+                                        <section key={type} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                            <div className="flex items-center space-x-3 mb-4 border-b border-slate-200 pb-2">
+                                                <h3 className="text-xl font-black text-slate-800 flex items-center">
+                                                    {type === '投手' && <Crosshair size={20} className="mr-2 text-red-500" />}
+                                                    {type === '捕手' && <Shield size={20} className="mr-2 text-yellow-500" />}
+                                                    {type === '內野手' && <Users size={20} className="mr-2 text-blue-500" />}
+                                                    {type === '外野手' && <Target size={20} className="mr-2 text-green-500" />}
+                                                    {type}
+                                                </h3>
+                                                <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">
+                                                    {typePlayers.length} 人
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {typePlayers.map(player => (
+                                                    <PlayerCard key={player.id} player={player} onClick={setSelectedPlayer} />
+                                                ))}
+                                            </div>
+                                        </section>
+                                    );
+                                })}
+                            </div>
+                        )}
+                        </>
                     )}
                 </div>
                 </div>
